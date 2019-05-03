@@ -130,7 +130,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
 
     # TODO remove, this is for demo purposes
     await asyncio.sleep(30)
-    partyPeople = await getPartcipantsFromReacts(ctx, draft)
+    partyPeople = await get_partcipants_from_reacts(ctx, draft)
     print(partyPeople)    
 
 
@@ -192,10 +192,10 @@ async def waiver(ctx, mode, event_key, *args):
         if mode.lower() == "create":
             pass
 
-async def getPartcipantsFromReacts(ctx, draft):
-    if self.joinMessageId is None:
-        return None
+async def get_partcipants_from_reacts(ctx, draft):
     msgId = draft.getJoinMessageId()
+    if msgId is None:
+        return None
     msg = await ctx.fetch_message(msgId)
     participants = []
     for reaction in msg.reactions:
