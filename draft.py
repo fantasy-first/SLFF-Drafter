@@ -38,14 +38,14 @@ class Draft:
 
     def getTeamList(self):
         sortedTeams = sorted(list(self.teamList))
-        return [t[0]+t[1] for t in sortedTeams]
+        return [str(t[0])+t[1] for t in sortedTeams]
 
     @classmethod
     def parseTeam(cls, team):
         if team.isdigit():
-            return (team, "")
+            return (int(team), "")
         elif team[:-1].isdigit() and team[-1] in ["B", "C", "D", "E", "F"]:
-            return (team[:-1], team[-1:])
+            return (int(team[:-1]), team[-1:])
         else:
             return None
 
