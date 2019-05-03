@@ -16,7 +16,7 @@ nextIdNum = 1
 drafts = {}
 
 def getReadableDatetime(dt):
-    return dt.strftime("%H:%M:%S on %b %d, %Y")
+    return dt.strftime("%H:%M on %b %d, %Y")
 
 @bot.event
 async def on_ready():
@@ -65,17 +65,35 @@ async def ping(ctx):
 
 """
     Initialize a new draft
-    Usage: .init draft_name reg_close_time draft_begin_time
-    Example: .init "MidKnight Mayhem" 2019-05-02T12:00:00 2019-05-02T15:00:00
+    Usage: .init draft_name draft_date reg_close_time draft_begin_time
+    Example: .init "MidKnight Mayhem" 2019-05-02 12:00 15:00
 """
 @bot.command(pass_context=True)
-async def init(ctx, event_name, reg_close_time, draft_begin_time):
+async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     try:
-        reg_close_time_dt = datetime.datetime.strptime(reg_close_time, '%Y-%m-%dT%H:%M:%S')
-        draft_begin_time_dt = datetime.datetime.strptime(draft_begin_time, '%Y-%m-%dT%H:%M:%S')
+        reg_close = "{} {}".format(draft_date, reg_close_time)
+        reg_close_time_dt = datetime.datetime.strptime(
+            reg_close, '%Y-%m-%d %H:%M')
     except ValueError:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
-        embed.add_field(name='Invalid ISO timestamp', value="Please try again with a valid ISO timestamp", inline=False)
+        embed.add_field(
+            name='Invalid date or time for registration close', 
+            value="Please check your date and/or time to close registration and try again", 
+            inline=False,
+        )
+        await ctx.send(embed=embed)
+        return
+    try:
+        draft_begin = "{} {}".format(draft_date, draft_begin_time)
+        draft_begin_time_dt = datetime.datetime.strptime(
+            draft_begin, '%Y-%m-%d %H:%M')
+    except ValueError:
+        embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
+        embed.add_field(
+            name='Invalid date or time for draft beginning', 
+            value="Please check your date and/or time to begin the draft and try again", 
+            inline=False,
+        )
         await ctx.send(embed=embed)
         return
     # TODO prevent drafts from happening in the past

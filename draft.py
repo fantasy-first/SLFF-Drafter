@@ -21,6 +21,6 @@ class Draft:
 
     @classmethod
     def getNewDraftKey(cls):
-        draftKey = "off{}".format(cls.nextIdNum)
+        draftKey = "off_{}".format(cls.nextIdNum)
         cls.nextIdNum += 1
         return draftKey
