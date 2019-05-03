@@ -23,19 +23,6 @@ class Draft:
     def getJoinMessageId(self):
         return self.joinMessageId
 
-    async def getPartcipantsFromReacts(self, ctx, register_emoji, bot_user_id):
-        if self.joinMessageId is None:
-            return None
-        msgId = self.getJoinMessageId()
-        msg = await ctx.fetch_message(msgId)
-        participants = []
-        for reaction in msg.reactions:
-            if reaction.emoji == register_emoji:
-                async for user in reaction.users():
-                    if user.id != bot_user_id:
-                        participants.append(user.id)
-        return participants
-
     @classmethod
     def getNewDraftKey(cls):
         draftKey = "off_{}".format(cls.nextIdNum)

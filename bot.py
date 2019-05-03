@@ -130,7 +130,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
 
     # TODO remove, this is for demo purposes
     await asyncio.sleep(30)
-    partyPeople = await draft.getPartcipantsFromReacts(ctx, REGISTER_EMOJI, BOT_USER_ID)
+    partyPeople = await getPartcipantsFromReacts(ctx, draft)
     print(partyPeople)    
 
 
@@ -191,6 +191,19 @@ async def waiver(ctx, mode, event_key, *args):
     if ctx.message.author.id == "118000175816900615":
         if mode.lower() == "create":
             pass
+
+async def getPartcipantsFromReacts(ctx, draft):
+    if self.joinMessageId is None:
+        return None
+    msgId = draft.getJoinMessageId()
+    msg = await ctx.fetch_message(msgId)
+    participants = []
+    for reaction in msg.reactions:
+        if reaction.emoji == REGISTER_EMOJI:
+            async for user in reaction.users():
+                if user.id != BOT_USER_ID:
+                    participants.append(user.id)
+    return participants
 
 
 bot.run("NTczNTU3Mjc4Njk1ODgyNzYy.XMsk7g.O87PcUymC7KpkfonklSJpe-ZjQQ")
