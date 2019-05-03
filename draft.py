@@ -19,9 +19,19 @@ class Draft:
         self.teamList = set()
         self.joinMessageId = None
         self.state = DraftState.BEFORE
+        self.eventKey = None
+
+    def getName(self):
+        return self.name
 
     def getDraftKey(self):
         return self.draftKey
+
+    def setEventKey(self, eventKey):
+        self.eventKey = eventKey
+
+    def getEventKey(self):
+        return self.eventKey
 
     def setJoinMessageId(self, joinMessageId):
         self.joinMessageId = joinMessageId
@@ -34,6 +44,15 @@ class Draft:
         if None in newTeams:
             return False
         self.teamList |= newTeams
+        return True 
+
+    def removeTeams(self, teamList):
+        rmTeams = set([self.parseTeam(t) for t in teamList])
+        if None in rmTeams:
+            return False
+        if len(rmTeams - self.teamList) > 0:
+            return False
+        self.teamList -= rmTeams
         return True 
 
     def getTeamList(self):
