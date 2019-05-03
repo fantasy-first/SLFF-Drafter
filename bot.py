@@ -5,6 +5,11 @@ from random import shuffle
 from tabulate import tabulate
 import datetime
 from draft import Draft
+import asyncio
+
+BOT_USER_ID = 573557278695882762
+
+REGISTER_EMOJI = u"\U0001F44D"
 
 Client = discord.Client()
 bot = commands.Bot(command_prefix=".")
@@ -111,16 +116,24 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     title_msg = 'Created draft for "{}" [id: {}]'.format(event_name, draftKey)
     
     embed = discord.Embed(color=0xe8850d, title=title_msg)
-    embed.add_field(name='To register for this draft:', value='React to this message with :thumbsup:')
+    embed.add_field(name='To register for this draft:', value='React to this message with {}'.format(REGISTER_EMOJI))
     embed.add_field(name='Registration closes at:', value=readable_reg_close_time, inline=False)
     embed.add_field(name='Draft starts at:', value=readable_draft_begin_time, inline=False)
     embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png')
 
     sent = await ctx.send(embed=embed)
-    
+
     draft.setJoinMessageId(sent.id)
     drafts[draftKey] = draft
     
+    await sent.add_reaction(REGISTER_EMOJI)
+
+    # TODO remove, this is for demo purposes
+    await asyncio.sleep(30)
+    partyPeople = await draft.getPartcipantsFromReacts(ctx, REGISTER_EMOJI, BOT_USER_ID)
+    print(partyPeople)    
+
+
 @bot.command(pass_context=True)
 async def start(ctx, event_name, *args):
     """Initialize a Draft"""
