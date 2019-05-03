@@ -6,6 +6,7 @@ from tabulate import tabulate
 import datetime
 from draft import Draft
 import asyncio
+from keys import DISCORD_TOKEN
 
 BOT_USER_ID = 573557278695882762
 
@@ -129,9 +130,9 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     await sent.add_reaction(REGISTER_EMOJI)
 
     # TODO remove, this is for demo purposes
-    await asyncio.sleep(30)
-    partyPeople = await get_partcipants_from_reacts(ctx, draft)
-    print(partyPeople)    
+    #await asyncio.sleep(30)
+    #partyPeople = await get_partcipants_from_reacts(ctx, draft)
+    #print(partyPeople)    
 
 
 @bot.command(pass_context=True)
@@ -205,5 +206,5 @@ async def get_partcipants_from_reacts(ctx, draft):
                     participants.append(user.id)
     return participants
 
-
-bot.run("NTczNTU3Mjc4Njk1ODgyNzYy.XMsk7g.O87PcUymC7KpkfonklSJpe-ZjQQ")
+if __name__ == "__main__":
+    bot.run(DISCORD_TOKEN)
