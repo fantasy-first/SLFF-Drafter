@@ -1,21 +1,29 @@
 import discord
-import tbapy
+#import tbapy
 from discord.ext import commands
 from random import shuffle
 from tabulate import tabulate
+import datetime
+from draft import Draft
 
 Client = discord.Client()
 bot = commands.Bot(command_prefix=".")
 
-tba = tbapy.TBA('9qTowkNEd3IarS0iDGB40d6Gqi4YJDlosHiLeLypQ3XfAEFeBp0bIYSqcBqB3fHb')
+#tba = tbapy.TBA('9qTowkNEd3IarS0iDGB40d6Gqi4YJDlosHiLeLypQ3XfAEFeBp0bIYSqcBqB3fHb')
 
+nextIdNum = 1
+
+drafts = {}
+
+def getReadableDatetime(dt):
+    return dt.strftime("%H:%M:%S on %b %d, %Y")
 
 @bot.event
 async def on_ready():
-    print("I'm alive")
     print("I am running as " + bot.user.name)
 
 
+# TODO refactor
 def time_math(hour, minute, additions, margin):
     if margin == 0:
         pass
@@ -31,7 +39,7 @@ def time_math(hour, minute, additions, margin):
             string_minute = minute
     return (str(hour) + ":" + str(string_minute)), hour, minute
 
-
+# TODO refactor
 def setup_draft(start_hour, start_minute, players):
     number_of_teams = len(players)
     r2_stats = time_math(start_hour, start_minute, number_of_teams - 1, 3)
@@ -55,15 +63,46 @@ async def ping(ctx):
     print('-------------------')
     await ctx.send(latency)
 
+"""
+    Initialize a new draft
+    Usage: .init draft_name reg_close_time draft_begin_time
+    Example: .init "MidKnight Mayhem" 2019-05-02T12:00:00 2019-05-02T15:00:00
+"""
 @bot.command(pass_context=True)
 async def init(ctx, event_name, reg_close_time, draft_begin_time):
-    embed = discord.Embed(color=0xe8850d, title=event_name)
-    embed.add_field(name='Registration closes at:', value=reg_close_time, inline=False)
-    embed.add_field(name='Draft starts at:', value=draft_begin_time, inline=False)
+    try:
+        reg_close_time_dt = datetime.datetime.strptime(reg_close_time, '%Y-%m-%dT%H:%M:%S')
+        draft_begin_time_dt = datetime.datetime.strptime(draft_begin_time, '%Y-%m-%dT%H:%M:%S')
+    except ValueError:
+        embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
+        embed.add_field(name='Invalid ISO timestamp', value="Please try again with a valid ISO timestamp", inline=False)
+        await ctx.send(embed=embed)
+        return
+    # TODO prevent drafts from happening in the past
+    draft = Draft(
+        name=event_name, 
+        reg_close_time=reg_close_time_dt, 
+        draft_begin_time=draft_begin_time_dt,
+    )
+
+    draftKey = draft.getDraftKey()
+    
+    readable_reg_close_time = getReadableDatetime(reg_close_time_dt)
+    readable_draft_begin_time = getReadableDatetime(draft_begin_time_dt)
+
+    title_msg = 'Created draft for "{}" [id: {}]'.format(event_name, draftKey)
+    
+    embed = discord.Embed(color=0xe8850d, title=title_msg)
+    embed.add_field(name='To register for this draft:', value='React to this message with :thumbsup:')
+    embed.add_field(name='Registration closes at:', value=readable_reg_close_time, inline=False)
+    embed.add_field(name='Draft starts at:', value=readable_draft_begin_time, inline=False)
     embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png')
-    await ctx.send(embed=embed)
 
-
+    sent = await ctx.send(embed=embed)
+    
+    draft.setJoinMessageId(sent.id)
+    drafts[draftKey] = draft
+    
 @bot.command(pass_context=True)
 async def start(ctx, event_name, *args):
     """Initialize a Draft"""
