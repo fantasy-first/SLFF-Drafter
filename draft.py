@@ -1,3 +1,8 @@
+class DraftState:
+    BEFORE = 0
+    DURING = 1
+    AFTER = 2
+
 class Draft:
     
     nextIdNum = 1 # TODO read this from somewhere
@@ -11,8 +16,9 @@ class Draft:
         self.reg_close_time = reg_close_time
         self.draft_begin_time = draft_begin_time
         self.draftKey = self.getNewDraftKey()
-        self.teamList = []
+        self.teamList = set()
         self.joinMessageId = None
+        self.state = DraftState.BEFORE
 
     def getDraftKey(self):
         return self.draftKey
@@ -22,6 +28,26 @@ class Draft:
 
     def getJoinMessageId(self):
         return self.joinMessageId
+
+    def addTeams(self, teamList):
+        newTeams = set([self.parseTeam(t) for t in teamList])
+        if None in newTeams:
+            return False
+        self.teamList |= newTeams
+        return True 
+
+    def getTeamList(self):
+        sortedTeams = sorted(list(self.teamList))
+        return [t[0]+t[1] for t in sortedTeams]
+
+    @classmethod
+    def parseTeam(cls, team):
+        if team.isdigit():
+            return (team, "")
+        elif team[:-1].isdigit() and team[-1] in ["B", "C", "D", "E", "F"]:
+            return (team[:-1], team[-1:])
+        else:
+            return None
 
     @classmethod
     def getNewDraftKey(cls):

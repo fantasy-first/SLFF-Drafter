@@ -19,7 +19,10 @@ bot = commands.Bot(command_prefix=".")
 
 nextIdNum = 1
 
+# maps draftKey -> Draft
 drafts = {}
+# maps eventKey -> draftKey
+eventKeys = {}
 
 def getReadableDatetime(dt):
     return dt.strftime("%H:%M on %b %d, %Y")
@@ -133,6 +136,36 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     #await asyncio.sleep(30)
     #partyPeople = await get_partcipants_from_reacts(ctx, draft)
     #print(partyPeople)    
+
+@bot.command(pass_context=True)
+async def addteams(ctx, draftKey, *args):
+    if draftKey not in drafts:
+        embed = discord.Embed(color=0xe8850d, title="ERROR in `.addteams`")
+        embed.add_field(
+            name='Invalid draft key', 
+            value="Please check your draft key and try again", 
+            inline=False,
+        )
+        await ctx.send(embed=embed)
+        return
+    if not drafts[draftKey].addTeams(args):
+        embed = discord.Embed(color=0xe8850d, title="ERROR in `.addteams`")
+        embed.add_field(
+            name='Invalid team number(s)', 
+            value="Please check your team list and try again", 
+            inline=False,
+        )
+        await ctx.send(embed=embed)
+        return
+    newTeams = ", ".join(str(t) for t in args)
+    teamList = ", ".join(drafts[draftKey].getTeamList())
+    embed = discord.Embed(color=0xe8850d, title="Successfully added to team list for [{}]".format(draftKey))
+    embed.add_field(
+        name='Added {}'.format(newTeams), 
+        value="New team list: {}".format(teamList), 
+        inline=False,
+    )
+    await ctx.send(embed=embed)
 
 
 @bot.command(pass_context=True)
