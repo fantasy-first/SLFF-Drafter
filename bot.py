@@ -52,6 +52,15 @@ async def ping(ctx):
     Usage: .init draft_name draft_date reg_close_time draft_begin_time
     Example: .init "MidKnight Mayhem" 2019-05-02 12:00 15:00
 """
+
+# TODO fix this broken function
+@bot.command(pass_context=True)
+async def test(ctx):
+    await init._callback(ctx, "MidKnight Mayhem", "2019-06-01", "2:30", "4:30")
+    await setplayers._callback(ctx, "off_1", ["Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"])
+    await addteams._callback(ctx, "off_1", [str(i) for i in range(1, 31)])
+    await start._callback(ctx, "off_1")
+
 @bot.command(pass_context=True)
 async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     try:
@@ -192,53 +201,60 @@ async def setkey(ctx, draftKey, eventKey):
         await ctx.send(embed=embed)
 
 @bot.command(pass_context=True)
-async def start(ctx, event_name, *args):
+async def setplayers(ctx, draftKey, args):
+    draft = getDraft(draftKey)
+    draft.setPlayers(args)
+
+@bot.command(pass_context=True)
+async def start(ctx, draftKey):
     """Initialize a Draft"""
 
-    # Check if there is an event key
-    event_data = tba.event(args[0])
-    try:
-        error_testing = event_data['Errors']
-        event_key = None
-    except:
-        event_key = args[0]
+    # # Check if there is an event key
+    # event_data = tba.event(args[0])
+    # try:
+    #     error_testing = event_data['Errors']
+    #     event_key = None
+    # except:
+    #     event_key = args[0]
         
 
-    # Set event name
-    if event_key is None:
-        # Find team list
-        team_list = []
-    else:
-        event_name = event_data['name']
+    # # Set event name
+    # if event_key is None:
+    #     # Find team list
+    #     team_list = []
+    # else:
+    #     event_name = event_data['name']
 
+    draft = getDraft(draftKey)
+    draft.start()
+    table = draft.getInformation()
+    # attending_teams_data = tba.event_teams(event_key)
+    # attending_teams = []
+    # for team in attending_teams_data:  # Get team list
+    #     attending_teams.append(team['key'][3:])
+    # attending_teams.sort(key=lambda t: int(t))
+    # attending_teams_string = ' '.join([str(t).rjust(4) for t in attending_teams])
+    # random_list = attending_teams
+    # shuffle(random_list)
 
+    headers = ["Player", "Pick 1", "Pick 2", "Pick 3"]
 
-    table = setup_draft(8, 0, args)
-    attending_teams_data = tba.event_teams(event_key)
-    attending_teams = []
-    for team in attending_teams_data:  # Get team list
-        attending_teams.append(team['key'][3:])
-    attending_teams.sort(key=lambda t: int(t))
-    attending_teams_string = ' '.join([str(t).rjust(4) for t in attending_teams])
-    random_list = attending_teams
-    shuffle(random_list)
-
-    headers = ["SLFF Team", "1st Pick", "2nd Pick", "3rd Pick"]
+    event_name = draft.getName()
 
     embed = discord.Embed(color=0xe8850d, title=event_name)
     embed.add_field(name='Picks', value="```" + tabulate(table, headers, tablefmt="presto") + "```",
                     inline=True)
 
-    embed.add_field(name='Available Teams', value="```" + attending_teams_string + "```", inline=False)
+    #embed.add_field(name='Available Teams', value="```" + attending_teams_string + "```", inline=False)
     await ctx.send(embed=embed)
 
-    random_list_string = ""
-    for team in random_list:
-        random_list_string += team + "\n"
+    # random_list_string = ""
+    # for team in random_list:
+    #     random_list_string += team + "\n"
 
-    randoms = discord.Embed(color=0xe8850d, title="Randoms for " + event_name)
-    randoms.add_field(name='Randoms', value=random_list_string, inline=False)
-    await ctx.send(embed=randoms)
+    # randoms = discord.Embed(color=0xe8850d, title="Randoms for " + event_name)
+    # randoms.add_field(name='Randoms', value=random_list_string, inline=False)
+    # await ctx.send(embed=randoms)
 
 
 @bot.command(pass_context=True)

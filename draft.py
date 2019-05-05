@@ -1,5 +1,6 @@
 import datetime
 import random
+import tabulate
 
 class DraftState:
     BEFORE = 0
@@ -53,12 +54,13 @@ class Draft:
             # TODO instead of just showing time slots, show picks that have happened too
             table = []
             n_players = len(self.playerList)
-            table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
+            #table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
             for i, player in enumerate(self.playerList):
                 firstPickSlot = self.timeSlots[i].strftime("%H:%M")
                 secondPickSlot = self.timeSlots[2*n_players-1-i].strftime("%H:%M")
                 thirdPickSlot = self.timeSlots[2*n_players+i].strftime("%H:%M")
                 table.append([player, firstPickSlot, secondPickSlot, thirdPickSlot])
+            print(tabulate.tabulate(table))
             return table
 
     """
@@ -166,5 +168,4 @@ if __name__ == "__main__":
     draft.setPlayers(["Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"])
     draft.addTeams([str(i) for i in range(1, 31)])
     draft.start()
-    import tabulate
     print(tabulate.tabulate(draft.getInformation()))
