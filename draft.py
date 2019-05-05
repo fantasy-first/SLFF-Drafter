@@ -1,4 +1,5 @@
 import datetime
+import random
 
 class DraftState:
     BEFORE = 0
@@ -23,7 +24,8 @@ class Draft:
         self.joinMessageId = None
         self.state = DraftState.BEFORE
         self.eventKey = None
-
+        self.timeSlots = None
+        self.draftOrder = None
 
     """
         Methods for reading draft metadata
@@ -40,6 +42,25 @@ class Draft:
     def getJoinMessageId(self):
         return self.joinMessageId
 
+    def getDraftBeginTime(self):
+        return self.draft_begin_time
+
+    def getInformation(self):
+        if self.state == DraftState.BEFORE:
+            # TODO provide a preview with signed up players, the current team list, any other fun stats
+            pass
+        elif self.state == DraftState.DURING:
+            # TODO instead of just showing time slots, show picks that have happened too
+            table = []
+            n_players = len(self.playerList)
+            table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
+            for i, player in enumerate(self.playerList):
+                firstPickSlot = self.timeSlots[i].strftime("%H:%M")
+                secondPickSlot = self.timeSlots[2*n_players-1-i].strftime("%H:%M")
+                thirdPickSlot = self.timeSlots[2*n_players+i].strftime("%H:%M")
+                table.append([player, firstPickSlot, secondPickSlot, thirdPickSlot])
+            return table
+
     """
         Methods for writing draft metadata
     """
@@ -49,6 +70,40 @@ class Draft:
 
     def setJoinMessageId(self, joinMessageId):
         self.joinMessageId = joinMessageId
+
+    def generateDraftOrder(self):
+        self.draftOrder = list(self.playerList)
+        random.shuffle(self.draftOrder)
+
+    def generateTimeSlots(
+        self,
+        first_pick_time = 3, 
+        second_pick_time = 2, 
+        third_pick_time = 2,
+    ):
+        n_players = len(self.playerList)
+        slots = [self.draft_begin_time]
+        firstRoundDelta = datetime.timedelta(seconds = 60*first_pick_time)
+        for i in range(n_players-1):
+            lastSlot = slots[-1]
+            slots.append(lastSlot + firstRoundDelta)
+
+        secondRoundDelta = datetime.timedelta(seconds = 60*second_pick_time)
+        for i in range(n_players):
+            lastSlot = slots[-1]
+            slots.append(lastSlot + secondRoundDelta)     
+
+        thirdRoundDelta = datetime.timedelta(seconds = 60*third_pick_time)
+        for i in range(n_players):
+            lastSlot = slots[-1]
+            slots.append(lastSlot + thirdRoundDelta)
+
+        self.timeSlots = slots
+
+    def start(self):
+        self.generateDraftOrder()
+        self.generateTimeSlots()
+        self.state = DraftState.DURING
 
     """
         Methods for reading/modifying the draft list of FRC teams
@@ -85,35 +140,8 @@ class Draft:
         return self.playerList
 
     """
-        Utilities for various draft operations
+        Static utilities for various draft operations
     """
-
-    @classmethod
-    def getDraftSlotTimes(
-        cls, 
-        draft_begin_time, 
-        n_players, 
-        first_pick_time = 3, 
-        second_pick_time = 2, 
-        third_pick_time = 2
-    ):
-        slots = [draft_begin_time]
-        firstRoundDelta = datetime.timedelta(seconds = 60*first_pick_time)
-        for i in range(n_players-1):
-            lastSlot = slots[-1]
-            slots.append(lastSlot + firstRoundDelta)
-
-        secondRoundDelta = datetime.timedelta(seconds = 60*second_pick_time)
-        for i in range(n_players):
-            lastSlot = slots[-1]
-            slots.append(lastSlot + secondRoundDelta)     
-
-        thirdRoundDelta = datetime.timedelta(seconds = 60*third_pick_time)
-        for i in range(n_players):
-            lastSlot = slots[-1]
-            slots.append(lastSlot + thirdRoundDelta)
-
-        return slots
 
     @classmethod
     def parseTeam(cls, team):
@@ -130,5 +158,13 @@ class Draft:
         cls.nextIdNum += 1 # TODO write this to somewhere
         return draftKey
 
+
 if __name__ == "__main__":
-    print(Draft.getDraftSlotTimes(datetime.datetime.strptime("2019-05-02 18:00", '%Y-%m-%d %H:%M'), 8))
+    start = datetime.datetime.strptime("2019-05-02 18:00", '%Y-%m-%d %H:%M')
+    reg_close = datetime.datetime.strptime("2019-05-02 12:00", '%Y-%m-%d %H:%M')
+    draft = Draft("Test Draft", reg_close, start)
+    draft.setPlayers(["Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"])
+    draft.addTeams([str(i) for i in range(1, 31)])
+    draft.start()
+    import tabulate
+    print(tabulate.tabulate(draft.getInformation()))

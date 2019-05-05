@@ -40,39 +40,6 @@ def getDraft(key):
     else:
         return None
 
-# TODO refactor
-def time_math(hour, minute, additions, margin):
-    if margin == 0:
-        pass
-    else:
-        for j in range(0, additions):
-            minute += margin
-            if minute >= 60:
-                hour += 1
-                minute -= 60
-        if minute < 10:
-            string_minute = "0" + str(minute)
-        else:
-            string_minute = minute
-    return (str(hour) + ":" + str(string_minute)), hour, minute
-
-# TODO refactor
-def setup_draft(start_hour, start_minute, players):
-    number_of_teams = len(players)
-    r2_stats = time_math(start_hour, start_minute, number_of_teams - 1, 3)
-    r3_stats = time_math(r2_stats[1], r2_stats[2], number_of_teams + 1, 2)
-    table = []
-
-    i = 0
-    for player in players:
-        team_setup = [player, time_math(start_hour, start_minute, i, 3)[0],
-                      time_math(r2_stats[1], r2_stats[2], (number_of_teams - i), 2)[0],
-                      time_math(r3_stats[1], r3_stats[2], i, 2)[0]]
-        table.append(team_setup)
-        i += 1
-    return table
-
-
 @bot.command()
 async def ping(ctx):
     latency = bot.latency
