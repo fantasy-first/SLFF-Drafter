@@ -1,3 +1,5 @@
+import datetime
+
 class DraftState:
     BEFORE = 0
     DURING = 1
@@ -17,27 +19,40 @@ class Draft:
         self.draft_begin_time = draft_begin_time
         self.draftKey = self.getNewDraftKey()
         self.teamList = set()
+        self.playerList = set()
         self.joinMessageId = None
         self.state = DraftState.BEFORE
         self.eventKey = None
 
+
+    """
+        Methods for reading draft metadata
+    """
     def getName(self):
         return self.name
 
     def getDraftKey(self):
         return self.draftKey
 
-    def setEventKey(self, eventKey):
-        self.eventKey = eventKey
-
     def getEventKey(self):
         return self.eventKey
+
+    def getJoinMessageId(self):
+        return self.joinMessageId
+
+    """
+        Methods for writing draft metadata
+    """
+
+    def setEventKey(self, eventKey):
+        self.eventKey = eventKey
 
     def setJoinMessageId(self, joinMessageId):
         self.joinMessageId = joinMessageId
 
-    def getJoinMessageId(self):
-        return self.joinMessageId
+    """
+        Methods for reading/modifying the draft list of FRC teams
+    """
 
     def addTeams(self, teamList):
         newTeams = set([self.parseTeam(t) for t in teamList])
@@ -59,6 +74,47 @@ class Draft:
         sortedTeams = sorted(list(self.teamList))
         return [str(t[0])+t[1] for t in sortedTeams]
 
+    """
+        Methods for reading/modifying the list of players participating
+    """
+
+    def setPlayers(self, playerList):
+        self.playerList = set(playerList)
+
+    def getPlayers(self, playerList):
+        return self.playerList
+
+    """
+        Utilities for various draft operations
+    """
+
+    @classmethod
+    def getDraftSlotTimes(
+        cls, 
+        draft_begin_time, 
+        n_players, 
+        first_pick_time = 3, 
+        second_pick_time = 2, 
+        third_pick_time = 2
+    ):
+        slots = [draft_begin_time]
+        firstRoundDelta = datetime.timedelta(seconds = 60*first_pick_time)
+        for i in range(n_players-1):
+            lastSlot = slots[-1]
+            slots.append(lastSlot + firstRoundDelta)
+
+        secondRoundDelta = datetime.timedelta(seconds = 60*second_pick_time)
+        for i in range(n_players):
+            lastSlot = slots[-1]
+            slots.append(lastSlot + secondRoundDelta)     
+
+        thirdRoundDelta = datetime.timedelta(seconds = 60*third_pick_time)
+        for i in range(n_players):
+            lastSlot = slots[-1]
+            slots.append(lastSlot + thirdRoundDelta)
+
+        return slots
+
     @classmethod
     def parseTeam(cls, team):
         if team.isdigit():
@@ -73,3 +129,6 @@ class Draft:
         draftKey = "off_{}".format(cls.nextIdNum)
         cls.nextIdNum += 1 # TODO write this to somewhere
         return draftKey
+
+if __name__ == "__main__":
+    print(Draft.getDraftSlotTimes(datetime.datetime.strptime("2019-05-02 18:00", '%Y-%m-%d %H:%M'), 8))
