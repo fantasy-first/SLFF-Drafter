@@ -1,171 +1,175 @@
 import datetime
 import random
+
 import tabulate
+
 
 class DraftState:
     BEFORE = 0
     DURING = 1
     AFTER = 2
 
+
 class Draft:
-    
-    nextIdNum = 1 # TODO read this from somewhere
-    """
+    next_id_num = 1  # TODO read this from somewhere
+
+    def __init__(self, name, reg_close_time, draft_begin_time):
+        """
         @param name: a string representing a human-readable name for the event
         @param reg_close_time: a datetime object corresponding to the close of signups
-        @param draft_begin_time: a datimetime object corresponding to the first player's slot time
-    """
-    def __init__(self, name, reg_close_time, draft_begin_time):
+        @param draft_begin_time: a datetime object corresponding to the first player's slot time
+        """
         self.name = name
         self.reg_close_time = reg_close_time
         self.draft_begin_time = draft_begin_time
-        self.draftKey = self.getNewDraftKey()
-        self.teamList = set()
-        self.playerList = set()
-        self.joinMessageId = None
+        self.draft_key = self.get_new_draft_key()
+        self.team_list = set()
+        self.player_list = set()
+        self.join_message_id = None
         self.state = DraftState.BEFORE
-        self.eventKey = None
-        self.timeSlots = None
-        self.draftOrder = None
+        self.event_key = None
+        self.time_slots = None
+        self.draft_order = None
 
     """
-        Methods for reading draft metadata
+    Methods for reading draft metadata
     """
-    def getName(self):
+
+    def get_name(self):
         return self.name
 
-    def getDraftKey(self):
-        return self.draftKey
+    def get_draft_key(self):
+        return self.draft_key
 
-    def getEventKey(self):
-        return self.eventKey
+    def get_event_key(self):
+        return self.event_key
 
-    def getJoinMessageId(self):
-        return self.joinMessageId
+    def get_join_message_id(self):
+        return self.join_message_id
 
-    def getDraftBeginTime(self):
+    def get_draft_begin_time(self):
         return self.draft_begin_time
 
-    def getInformation(self):
+    def get_information(self):
         if self.state == DraftState.BEFORE:
             # TODO provide a preview with signed up players, the current team list, any other fun stats
             pass
         elif self.state == DraftState.DURING:
             # TODO instead of just showing time slots, show picks that have happened too
             table = []
-            n_players = len(self.playerList)
-            #table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
-            for i, player in enumerate(self.playerList):
-                firstPickSlot = self.timeSlots[i].strftime("%H:%M")
-                secondPickSlot = self.timeSlots[2*n_players-1-i].strftime("%H:%M")
-                thirdPickSlot = self.timeSlots[2*n_players+i].strftime("%H:%M")
-                table.append([player, firstPickSlot, secondPickSlot, thirdPickSlot])
+            n_players = len(self.player_list)
+            # table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
+            for i, player in enumerate(self.player_list):
+                first_pick_slot = self.time_slots[i].strftime("%H:%M")
+                second_pick_slot = self.time_slots[2 * n_players - 1 - i].strftime("%H:%M")
+                third_pick_slot = self.time_slots[2 * n_players + i].strftime("%H:%M")
+                table.append([player, first_pick_slot, second_pick_slot, third_pick_slot])
             print(tabulate.tabulate(table))
             return table
 
     """
-        Methods for writing draft metadata
+    Methods for writing draft metadata
     """
 
-    def setEventKey(self, eventKey):
-        self.eventKey = eventKey
+    def set_event_key(self, event_key):
+        self.event_key = event_key
 
-    def setJoinMessageId(self, joinMessageId):
-        self.joinMessageId = joinMessageId
+    def set_join_message_id(self, join_message_id):
+        self.join_message_id = join_message_id
 
-    def generateDraftOrder(self):
-        self.draftOrder = list(self.playerList)
-        random.shuffle(self.draftOrder)
+    def generate_draft_order(self):
+        self.draft_order = list(self.player_list)
+        random.shuffle(self.draft_order)
 
-    def generateTimeSlots(
-        self,
-        first_pick_time = 3, 
-        second_pick_time = 2, 
-        third_pick_time = 2,
+    def generate_time_slots(
+            self,
+            first_pick_time=3,
+            second_pick_time=2,
+            third_pick_time=2,
     ):
-        n_players = len(self.playerList)
+        n_players = len(self.player_list)
         slots = [self.draft_begin_time]
-        firstRoundDelta = datetime.timedelta(seconds = 60*first_pick_time)
-        for i in range(n_players-1):
-            lastSlot = slots[-1]
-            slots.append(lastSlot + firstRoundDelta)
+        first_round_delta = datetime.timedelta(seconds=60 * first_pick_time)
+        for i in range(n_players - 1):
+            last_slot = slots[-1]
+            slots.append(last_slot + first_round_delta)
 
-        secondRoundDelta = datetime.timedelta(seconds = 60*second_pick_time)
+        second_round_delta = datetime.timedelta(seconds=60 * second_pick_time)
         for i in range(n_players):
-            lastSlot = slots[-1]
-            slots.append(lastSlot + secondRoundDelta)     
+            last_slot = slots[-1]
+            slots.append(last_slot + second_round_delta)
 
-        thirdRoundDelta = datetime.timedelta(seconds = 60*third_pick_time)
+        third_round_delta = datetime.timedelta(seconds=60 * third_pick_time)
         for i in range(n_players):
-            lastSlot = slots[-1]
-            slots.append(lastSlot + thirdRoundDelta)
+            last_slot = slots[-1]
+            slots.append(last_slot + third_round_delta)
 
-        self.timeSlots = slots
+        self.time_slots = slots
 
     def start(self):
-        self.generateDraftOrder()
-        self.generateTimeSlots()
+        self.generate_draft_order()
+        self.generate_time_slots()
         self.state = DraftState.DURING
 
     """
-        Methods for reading/modifying the draft list of FRC teams
+    Methods for reading/modifying the draft list of FRC teams
     """
 
-    def addTeams(self, teamList):
-        newTeams = set([self.parseTeam(t) for t in teamList])
-        if None in newTeams:
+    def add_teams(self, team_list):
+        new_teams = set([self.parse_team(t) for t in team_list])
+        if None in new_teams:
             return False
-        self.teamList |= newTeams
-        return True 
+        self.team_list |= new_teams
+        return True
 
-    def removeTeams(self, teamList):
-        rmTeams = set([self.parseTeam(t) for t in teamList])
-        if None in rmTeams:
+    def remove_teams(self, team_list):
+        rm_teams = set([self.parse_team(t) for t in team_list])
+        if None in rm_teams:
             return False
-        if len(rmTeams - self.teamList) > 0:
+        if len(rm_teams - self.team_list) > 0:
             return False
-        self.teamList -= rmTeams
-        return True 
+        self.team_list -= rm_teams
+        return True
 
-    def getTeamList(self):
-        sortedTeams = sorted(list(self.teamList))
-        return [str(t[0])+t[1] for t in sortedTeams]
-
-    """
-        Methods for reading/modifying the list of players participating
-    """
-
-    def setPlayers(self, playerList):
-        self.playerList = set(playerList)
-
-    def getPlayers(self, playerList):
-        return self.playerList
+    def get_team_list(self):
+        sorted_teams = sorted(list(self.team_list))
+        return [str(t[0]) + t[1] for t in sorted_teams]
 
     """
-        Static utilities for various draft operations
+    Methods for reading/modifying the list of players participating
+    """
+
+    def set_players(self, player_list):
+        self.player_list = set(player_list)
+
+    def get_players(self):
+        return self.player_list
+
+    """
+    Static utilities for various draft operations
     """
 
     @classmethod
-    def parseTeam(cls, team):
+    def parse_team(cls, team):
         if team.isdigit():
-            return (int(team), "")
+            return int(team), ""
         elif team[:-1].isdigit() and team[-1] in ["B", "C", "D", "E", "F"]:
-            return (int(team[:-1]), team[-1:])
+            return int(team[:-1]), team[-1:]
         else:
             return None
 
     @classmethod
-    def getNewDraftKey(cls):
-        draftKey = "off_{}".format(cls.nextIdNum)
-        cls.nextIdNum += 1 # TODO write this to somewhere
-        return draftKey
+    def get_new_draft_key(cls):
+        draft_key = "off_{}".format(cls.next_id_num)
+        cls.next_id_num += 1  # TODO write this to somewhere
+        return draft_key
 
 
 if __name__ == "__main__":
     start = datetime.datetime.strptime("2019-05-02 18:00", '%Y-%m-%d %H:%M')
     reg_close = datetime.datetime.strptime("2019-05-02 12:00", '%Y-%m-%d %H:%M')
     draft = Draft("Test Draft", reg_close, start)
-    draft.setPlayers(["Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"])
-    draft.addTeams([str(i) for i in range(1, 31)])
+    draft.set_players(["Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"])
+    draft.add_teams([str(i) for i in range(1, 31)])
     draft.start()
-    print(tabulate.tabulate(draft.getInformation()))
+    print(tabulate.tabulate(draft.get_information()))
