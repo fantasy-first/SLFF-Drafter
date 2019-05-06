@@ -11,14 +11,14 @@ class DraftState:
 
 
 class Draft:
-    nextIdNum = 1  # TODO read this from somewhere
-    """
+    next_id_num = 1  # TODO read this from somewhere
+
+    def __init__(self, name, reg_close_time, draft_begin_time):
+        """
         @param name: a string representing a human-readable name for the event
         @param reg_close_time: a datetime object corresponding to the close of signups
         @param draft_begin_time: a datetime object corresponding to the first player's slot time
-    """
-
-    def __init__(self, name, reg_close_time, draft_begin_time):
+        """
         self.name = name
         self.reg_close_time = reg_close_time
         self.draft_begin_time = draft_begin_time
@@ -32,7 +32,7 @@ class Draft:
         self.draft_order = None
 
     """
-        Methods for reading draft metadata
+    Methods for reading draft metadata
     """
 
     def get_name(self):
@@ -60,15 +60,15 @@ class Draft:
             n_players = len(self.player_list)
             # table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
             for i, player in enumerate(self.player_list):
-                firstPickSlot = self.time_slots[i].strftime("%H:%M")
-                secondPickSlot = self.time_slots[2 * n_players - 1 - i].strftime("%H:%M")
-                thirdPickSlot = self.time_slots[2 * n_players + i].strftime("%H:%M")
-                table.append([player, firstPickSlot, secondPickSlot, thirdPickSlot])
+                first_pick_slot = self.time_slots[i].strftime("%H:%M")
+                second_pick_slot = self.time_slots[2 * n_players - 1 - i].strftime("%H:%M")
+                third_pick_slot = self.time_slots[2 * n_players + i].strftime("%H:%M")
+                table.append([player, first_pick_slot, second_pick_slot, third_pick_slot])
             print(tabulate.tabulate(table))
             return table
 
     """
-        Methods for writing draft metadata
+    Methods for writing draft metadata
     """
 
     def set_event_key(self, event_key):
@@ -112,18 +112,18 @@ class Draft:
         self.state = DraftState.DURING
 
     """
-        Methods for reading/modifying the draft list of FRC teams
+    Methods for reading/modifying the draft list of FRC teams
     """
 
-    def add_teams(self, teamList):
-        newTeams = set([self.parse_team(t) for t in teamList])
-        if None in newTeams:
+    def add_teams(self, team_list):
+        new_teams = set([self.parse_team(t) for t in team_list])
+        if None in new_teams:
             return False
-        self.team_list |= newTeams
+        self.team_list |= new_teams
         return True
 
-    def remove_teams(self, teamList):
-        rm_teams = set([self.parse_team(t) for t in teamList])
+    def remove_teams(self, team_list):
+        rm_teams = set([self.parse_team(t) for t in team_list])
         if None in rm_teams:
             return False
         if len(rm_teams - self.team_list) > 0:
@@ -136,7 +136,7 @@ class Draft:
         return [str(t[0]) + t[1] for t in sorted_teams]
 
     """
-        Methods for reading/modifying the list of players participating
+    Methods for reading/modifying the list of players participating
     """
 
     def set_players(self, player_list):
@@ -146,7 +146,7 @@ class Draft:
         return self.player_list
 
     """
-        Static utilities for various draft operations
+    Static utilities for various draft operations
     """
 
     @classmethod
@@ -160,9 +160,9 @@ class Draft:
 
     @classmethod
     def get_new_draft_key(cls):
-        draftKey = "off_{}".format(cls.nextIdNum)
-        cls.nextIdNum += 1  # TODO write this to somewhere
-        return draftKey
+        draft_key = "off_{}".format(cls.next_id_num)
+        cls.next_id_num += 1  # TODO write this to somewhere
+        return draft_key
 
 
 if __name__ == "__main__":
