@@ -41,7 +41,7 @@ def get_draft(key: str) -> Draft:
     elif key in eventKeys:
         return drafts[eventKeys[key]]
     else:
-        raise Exception(f'Unable to find draft for key {key}')
+        raise ValueError(f'Unable to find draft for key {key}')
 
 
 @bot.command()
