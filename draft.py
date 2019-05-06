@@ -61,9 +61,9 @@ class Draft:
             n_players = len(self.player_list)
             # table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
             for i, player in enumerate(self.player_list):
-                first_pick_slot = self.time_slots[i].strftime("%H:%M")
-                second_pick_slot = self.time_slots[2 * n_players - 1 - i].strftime("%H:%M")
-                third_pick_slot = self.time_slots[2 * n_players + i].strftime("%H:%M")
+                first_pick_slot = self.time_slots[i].strftime("%I:%M")
+                second_pick_slot = self.time_slots[2 * n_players - 1 - i].strftime("%I:%M")
+                third_pick_slot = self.time_slots[2 * n_players + i].strftime("%I:%M")
                 table.append([player, first_pick_slot, second_pick_slot, third_pick_slot])
             print(tabulate.tabulate(table))
             return table

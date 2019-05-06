@@ -27,7 +27,7 @@ eventKeys = {}  # type: Dict[str, str]
 
 
 def get_readable_datetime(dt: datetime.datetime) -> str:
-    return dt.strftime("%H:%M on %b %d, %Y")
+    return dt.strftime("%I:%M %p (%Z) on %a %b %d, %Y")
 
 
 @bot.event
@@ -73,8 +73,9 @@ async def test(ctx):
 @bot.command(pass_context=True)
 async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     try:
-        reg_close = f'{draft_date} {reg_close_time}'
-        reg_close_time_dt = datetime.datetime.strptime(reg_close, '%Y-%m-%d %H:%M')
+        reg_close = f'{draft_date} {reg_close_time} -0400'
+        reg_close_time_dt = datetime.datetime.strptime(reg_close, '%Y-%m-%d %H:%M %z')
+        reg_close_time_dt += datetime.timedelta(hours=12)
     except ValueError:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
         embed.add_field(
@@ -85,8 +86,9 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         await ctx.send(embed=embed)
         return
     try:
-        draft_begin = f'{draft_date} {draft_begin_time}'
-        draft_begin_time_dt = datetime.datetime.strptime(draft_begin, '%Y-%m-%d %H:%M')
+        draft_begin = f'{draft_date} {draft_begin_time} -0400'
+        draft_begin_time_dt = datetime.datetime.strptime(draft_begin, '%Y-%m-%d %H:%M %z')
+        draft_begin_time_dt += datetime.timedelta(hours=12)
     except ValueError:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
         embed.add_field(
