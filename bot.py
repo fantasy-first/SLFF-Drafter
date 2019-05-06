@@ -7,6 +7,8 @@ from tabulate import tabulate
 from draft import Draft
 from keys import DISCORD_TOKEN
 
+from typing import Dict
+
 BOT_USER_ID = 573557278695882762
 
 REGISTER_EMOJI = u"\U0001F44D"
@@ -19,12 +21,12 @@ bot = commands.Bot(command_prefix=".")
 nextIdNum = 1
 
 # maps draftKey -> Draft
-drafts = {}
+drafts = {}  # type: Dict[str, Draft]
 # maps eventKey -> draftKey
-eventKeys = {}
+eventKeys = {}  # type: Dict[str, str]
 
 
-def getReadableDatetime(dt):
+def get_readable_datetime(dt: datetime.datetime) -> str:
     return dt.strftime("%H:%M on %b %d, %Y")
 
 
@@ -33,14 +35,13 @@ async def on_ready():
     print("I am running as " + bot.user.name)
 
 
-def getDraft(key):
+def get_draft(key: str) -> Draft:
     if key[:3] == "off":
         return drafts[key]
     elif key in eventKeys:
-        draftKey = eventKeys[key]
-        return drafts[draftKey]
+        return drafts[eventKeys[key]]
     else:
-        return None
+        raise Exception(f'Unable to find draft for key {key}')
 
 
 @bot.command()
@@ -62,19 +63,18 @@ async def ping(ctx):
 @bot.command(pass_context=True)
 async def test(ctx):
     await init._callback(ctx, "MidKnight Mayhem", "2019-06-01", "2:30", "4:30")
-    await setplayers._callback(ctx, "off_1",
-                               ["Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra",
-                                "TDav540"])
-    await addteams._callback(ctx, "off_1", [str(i) for i in range(1, 31)])
+    await set_players._callback(ctx, "off_1",
+                                "Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra",
+                                "TDav540")
+    await add_teams._callback(ctx, "off_1", *[str(i) for i in range(1, 31)])
     await start._callback(ctx, "off_1")
 
 
 @bot.command(pass_context=True)
 async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     try:
-        reg_close = "{} {}".format(draft_date, reg_close_time)
-        reg_close_time_dt = datetime.datetime.strptime(
-            reg_close, '%Y-%m-%d %H:%M')
+        reg_close = f'{draft_date} {reg_close_time}'
+        reg_close_time_dt = datetime.datetime.strptime(reg_close, '%Y-%m-%d %H:%M')
     except ValueError:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
         embed.add_field(
@@ -85,9 +85,8 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         await ctx.send(embed=embed)
         return
     try:
-        draft_begin = "{} {}".format(draft_date, draft_begin_time)
-        draft_begin_time_dt = datetime.datetime.strptime(
-            draft_begin, '%Y-%m-%d %H:%M')
+        draft_begin = f'{draft_date} {draft_begin_time}'
+        draft_begin_time_dt = datetime.datetime.strptime(draft_begin, '%Y-%m-%d %H:%M')
     except ValueError:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
         embed.add_field(
@@ -97,6 +96,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         )
         await ctx.send(embed=embed)
         return
+
     # TODO prevent drafts from happening in the past
     draft = Draft(
         name=event_name,
@@ -104,15 +104,14 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         draft_begin_time=draft_begin_time_dt,
     )
 
-    draftKey = draft.get_draft_key()
+    draft_key = draft.get_draft_key()
 
-    readable_reg_close_time = getReadableDatetime(reg_close_time_dt)
-    readable_draft_begin_time = getReadableDatetime(draft_begin_time_dt)
+    readable_reg_close_time = get_readable_datetime(reg_close_time_dt)
+    readable_draft_begin_time = get_readable_datetime(draft_begin_time_dt)
 
-    title_msg = 'Created draft for "{}" [id: {}]'.format(event_name, draftKey)
-
+    title_msg = f'Created draft for "{event_name}" [id: {draft_key}]'
     embed = discord.Embed(color=0xe8850d, title=title_msg)
-    embed.add_field(name='To register for this draft:', value='React to this message with {}'.format(REGISTER_EMOJI))
+    embed.add_field(name='To register for this draft:', value=f'React to this message with {REGISTER_EMOJI}')
     embed.add_field(name='Registration closes at:', value=readable_reg_close_time, inline=False)
     embed.add_field(name='Draft starts at:', value=readable_draft_begin_time, inline=False)
     embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png')
@@ -120,14 +119,14 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     sent = await ctx.send(embed=embed)
 
     draft.set_join_message_id(sent.id)
-    drafts[draftKey] = draft
+    drafts[draft_key] = draft
 
     await sent.add_reaction(REGISTER_EMOJI)
 
 
 @bot.command(pass_context=True)
-async def addteams(ctx, draftKey, *args):
-    if draftKey not in drafts:
+async def add_teams(ctx, draft_key, *args):
+    if draft_key not in drafts:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `.addteams`")
         embed.add_field(
             name='Invalid draft key',
@@ -136,7 +135,7 @@ async def addteams(ctx, draftKey, *args):
         )
         await ctx.send(embed=embed)
         return
-    if not drafts[draftKey].add_teams(args):
+    if not drafts[draft_key].add_teams(args):
         embed = discord.Embed(color=0xe8850d, title="ERROR in `.addteams`")
         embed.add_field(
             name='Invalid team number(s)',
@@ -145,20 +144,20 @@ async def addteams(ctx, draftKey, *args):
         )
         await ctx.send(embed=embed)
         return
-    newTeams = ", ".join(str(t) for t in args)
-    teamList = ", ".join(drafts[draftKey].get_team_list())
-    embed = discord.Embed(color=0xe8850d, title="Successfully added to team list for [{}]".format(draftKey))
+    new_teams = ", ".join(str(t) for t in args)
+    team_list = ", ".join(drafts[draft_key].get_team_list())
+    embed = discord.Embed(color=0xe8850d, title=f"Successfully added to team list for [{draft_key}]")
     embed.add_field(
-        name='Added {}'.format(newTeams),
-        value="New team list: {}".format(teamList),
+        name='Added {}'.format(new_teams),
+        value=f'New team list: {team_list}',
         inline=False,
     )
     await ctx.send(embed=embed)
 
 
 @bot.command(pass_context=True)
-async def removeteams(ctx, draftKey, *args):
-    if draftKey not in drafts:
+async def remove_teams(ctx, draft_key, *args):
+    if draft_key not in drafts:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `.removeteams`")
         embed.add_field(
             name='Invalid draft key',
@@ -167,7 +166,7 @@ async def removeteams(ctx, draftKey, *args):
         )
         await ctx.send(embed=embed)
         return
-    if not drafts[draftKey].remove_teams(args):
+    if not drafts[draft_key].remove_teams(args):
         embed = discord.Embed(color=0xe8850d, title="ERROR in `.removeteams`")
         embed.add_field(
             name='Invalid team number(s)',
@@ -177,8 +176,8 @@ async def removeteams(ctx, draftKey, *args):
         await ctx.send(embed=embed)
         return
     newTeams = ", ".join(str(t) for t in args)
-    teamList = ", ".join(drafts[draftKey].get_team_list())
-    embed = discord.Embed(color=0xe8850d, title="Successfully removed from team list for [{}]".format(draftKey))
+    teamList = ", ".join(drafts[draft_key].get_team_list())
+    embed = discord.Embed(color=0xe8850d, title=f"Successfully removed from team list for [{draft_key}]")
     embed.add_field(
         name='Removed {}'.format(newTeams),
         value="New team list: {}".format(teamList),
@@ -188,21 +187,21 @@ async def removeteams(ctx, draftKey, *args):
 
 
 @bot.command(pass_context=True)
-async def setkey(ctx, draftKey, eventKey):
-    if draftKey in drafts:
-        drafts[draftKey].set_event_key(eventKey)
-        name = drafts[draftKey].get_name()
+async def set_key(ctx, draft_key, event_key):
+    if draft_key in drafts:
+        drafts[draft_key].set_event_key(event_key)
+        name = drafts[draft_key].get_name()
         embed = discord.Embed(color=0xe8850d, title="TBA key for {} set".format(name))
         embed.add_field(
-            name='TBA Key for {} [{}] is now {}'.format(name, draftKey, eventKey),
-            value="Either key can be used to reference {}".format(name),
+            name=f'TBA Key for {name} [{draft_key}] is now {event_key}',
+            value=f"Either key can be used to reference {name}",
             inline=False,
         )
         await ctx.send(embed=embed)
     else:
         embed = discord.Embed(color=0xe8850d, title="ERROR in `.setkey`")
         embed.add_field(
-            name='No draft found with key [{}]'.format(draftKey),
+            name=f'No draft found with key [{draft_key}]',
             value="Please check your draft key and try again",
             inline=False,
         )
@@ -210,13 +209,13 @@ async def setkey(ctx, draftKey, eventKey):
 
 
 @bot.command(pass_context=True)
-async def setplayers(ctx, draftKey, args):
-    draft = getDraft(draftKey)
-    draft.setPlayers(args)
+async def set_players(ctx, draftKey, *args):
+    draft = get_draft(draftKey)
+    draft.set_players(args)
 
 
 @bot.command(pass_context=True)
-async def start(ctx, draftKey):
+async def start(ctx, draft_key):
     """Initialize a Draft"""
 
     # # Check if there is an event key
@@ -234,9 +233,9 @@ async def start(ctx, draftKey):
     # else:
     #     event_name = event_data['name']
 
-    draft = getDraft(draftKey)
+    draft = get_draft(draft_key)
     draft.start()
-    table = draft.getInformation()
+    table = draft.get_information()
     # attending_teams_data = tba.event_teams(event_key)
     # attending_teams = []
     # for team in attending_teams_data:  # Get team list
@@ -248,10 +247,10 @@ async def start(ctx, draftKey):
 
     headers = ["Player", "Pick 1", "Pick 2", "Pick 3"]
 
-    event_name = draft.getName()
+    event_name = draft.get_name()
 
     embed = discord.Embed(color=0xe8850d, title=event_name)
-    embed.add_field(name='Picks', value="```" + tabulate(table, headers, tablefmt="presto") + "```",
+    embed.add_field(name='Picks', value=f'```{tabulate(table, headers, tablefmt="presto")}```',
                     inline=True)
 
     # embed.add_field(name='Available Teams', value="```" + attending_teams_string + "```", inline=False)
