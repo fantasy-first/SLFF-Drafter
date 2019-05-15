@@ -66,7 +66,7 @@ async def test(ctx):
     await set_players._callback(ctx, "off_1",
                                 "Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra",
                                 "TDav540")
-    await add_teams._callback(ctx, "off_1", *[str(i) for i in range(1, 31)])
+    await add_teams._callback(ctx, "off_1", *[str(i) for i in range(981, 1041)])
     await start._callback(ctx, "off_1")
 
 
@@ -148,11 +148,11 @@ async def add_teams(ctx, draft_key, *args):
         return
     new_teams = ", ".join(str(t) for t in args)
     team_list = ", ".join(drafts[draft_key].get_team_list())
-    embed = discord.Embed(color=0xe8850d, title=f"Successfully added to team list for [{draft_key}]")
+    embed = discord.Embed(color=0xe8850d, title=f"Successfully updated [{draft_key}]")
     embed.add_field(
-        name='Added {}'.format(new_teams),
-        value=f'New team list: {team_list}',
-        inline=False,
+        name='Team List',
+        value=f'{team_list}',
+        inline=True,
     )
     await ctx.send(embed=embed)
 
@@ -251,9 +251,12 @@ async def start(ctx, draft_key):
 
     event_name = draft.get_name()
 
+    team_list = draft.get_team_square()
+
     embed = discord.Embed(color=0xe8850d, title=event_name)
     embed.add_field(name='Picks', value=f'```{tabulate(table, headers, tablefmt="presto")}```',
                     inline=True)
+    embed.add_field(name='Available', value=f'```{tabulate(team_list)}```')
 
     # embed.add_field(name='Available Teams', value="```" + attending_teams_string + "```", inline=False)
     await ctx.send(embed=embed)

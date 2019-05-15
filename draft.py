@@ -136,6 +136,19 @@ class Draft:
         return [str(t[0]) + t[1] for t in sorted_teams]
 
     """
+    Returns the team list chunked into rows for the SLFF drafter's message
+    team_list = [1,2,3,4,5,6,7,8,9]
+
+    get_team_square(cols=3) returns
+        [[1,2,3],
+         [4,5,6],
+         [7,8,9]]
+    """
+    def get_team_square(self, cols=8) -> List[List[str]]:
+        team_list = self.get_team_list()
+        return [team_list[i:i + cols] for i in range(0, len(team_list), cols)]
+
+    """
     Methods for reading/modifying the list of players participating
     """
 
