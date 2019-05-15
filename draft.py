@@ -135,6 +135,10 @@ class Draft:
         sorted_teams = sorted(list(self.team_list))
         return [str(t[0]) + t[1] for t in sorted_teams]
 
+    def get_team_square(self):
+        team_list = self.get_team_list()
+        return [team_list[i:i + 8] for i in range(0, len(team_list), 8)]
+
     """
     Methods for reading/modifying the list of players participating
     """
