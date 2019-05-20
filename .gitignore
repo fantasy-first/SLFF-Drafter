@@ -1,5 +1,10 @@
-keys.py
+# SLFF-Drafter specific
 
+keys.py
+credentials.json
+token.pickle
+
+# =====================================================================================================================
 
 # Created by https://www.gitignore.io/api/python,pycharm+all
 # Edit at https://www.gitignore.io/?templates=python,pycharm+all

@@ -1,13 +1,12 @@
 import datetime
+from typing import Dict
 
 import discord
 from discord.ext import commands
 from tabulate import tabulate
 
-from draft import Draft
 from keys import DISCORD_TOKEN
-
-from typing import Dict
+from models.draft import Draft
 
 BOT_USER_ID = 573557278695882762
 

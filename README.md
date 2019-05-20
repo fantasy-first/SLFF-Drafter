@@ -11,6 +11,10 @@ Create a file named `keys.py` in the root directory of the project that contains
 DISCORD_TOKEN = "my_discord_token"
 ```
 
+Go to this page and enable the Google Sheets API in order to download a `credentials.json` file:
+https://developers.google.com/sheets/api/quickstart/python
+
+
 We recommend you create a [virtualenv](https://virtualenv.pypa.io/en/latest/) to handle dependencies.
 
 ```bash
