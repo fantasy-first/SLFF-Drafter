@@ -1,5 +1,5 @@
 from base64 import b64encode, b64decode
-from typing import List
+from typing import List, Optional
 
 
 class EventInfo:
@@ -38,3 +38,47 @@ class EventInfo:
         """
         decoded = b64decode(teams_b64).decode()
         return decoded.split(',')
+
+
+class Pick:
+    def __init__(self, time: Optional[str], randomed: Optional[bool], team: Optional[str]):
+        """
+        Helper class for DraftResults model.
+        :param time: time of the pick (format t.b.d.)
+        :param randomed: true if the pick was randomed to the player, false otherwise
+        :param team: the actual team picked
+        """
+        self.time = time
+        self.randomed = randomed
+        self.team = team
+
+
+class DraftResults:
+    def __init__(self, player: str, event_id: str, tier: Optional[int], pick_number: Optional[int], picks: List[Pick]):
+        """
+        Helper class for storing draft results.
+        :param player: player name
+        :param event_id: SLFF event id
+        :param tier: tier the player is in
+        :param pick_number: specifies pick order (e.g. 1, 2, 3, ... 9, 10, ...)
+        :param picks: list of Picks that have been completed by the player (so size 0 to N)
+        """
+        self.player = player
+        self.event_id = event_id
+        self.tier = tier
+        self.pick_number = pick_number
+        self.picks = picks
+
+        while len(self.picks) != 3:
+            self.picks.append(Pick(None, None, None))
+
+    def to_data(self) -> List[Optional[str]]:
+        """
+        Converts object to data needed to post to the sheet.
+        :return: a list representing the draft results
+        """
+        ret = [self.player, self.event_id, self.tier, self.pick_number]
+        for pick in self.picks:
+            ret.extend([pick.time, pick.randomed, pick.team])
+
+        return ret

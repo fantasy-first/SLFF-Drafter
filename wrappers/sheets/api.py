@@ -1,6 +1,6 @@
 import os.path
 import pickle
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -19,6 +19,7 @@ SAMPLE_SPREADSHEET_ID = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
 DATA_STORE_SPREADSHEET_ID = '1rvjsDfInf9KWFUwwVjDwz2ZADeD_4Fx3LMmNws7exss'
 CREDS_CACHE_FILENAME = 'token.pickle'
 CREDENTIALS_JSON = 'credentials.json'
+MAX_NUM_PICKS = 3
 
 
 class SheetRange:
@@ -41,7 +42,7 @@ class SheetRange:
 
 
 class Sheet:
-    def __init__(self, name: str, total_range: SheetRange, spreadsheet: 'Spreadsheet'):
+    def __init__(self, name: str, total_range: SheetRange, spreadsheet: 'Spreadsheet', headers: List[str]):
         """
         Wrapper class that represents a single Sheet within a larger Google Spreadsheet.
         :param name: name of the sheet (the tab at the bottom)
@@ -51,23 +52,35 @@ class Sheet:
         self.name = name
         self.total_range = total_range
         self.spreadsheet = spreadsheet
+        self.headers = headers
 
-    def get_range_by_key(self, key: str, index: int) -> SheetRange:
+    def get_range_by_key_index_pairs(self, key_index_pairs: List[Tuple[str, str]]) -> SheetRange:
+        data = self.read_range(self.total_range)
+        for i, row in enumerate(data[1:], start=2):
+            if all(row[i] == k for k, i in key_index_pairs):
+                return SheetRange(self.name, self.total_range.col_first, i, self.total_range.col_last, i)
+
+        # todo: how do we handle this?
+        raise Exception(f'Unable to find row in {self.total_range} (key-indices {key_index_pairs})')
+
+    def get_range_by_key(self, key: str, index: str) -> SheetRange:
         """
         Retrieves the range representing a single row that contains a key in the given row index.
         :param key: value to search for
         :param index: index in the row to search for the value
         :return: a SheetRange representing a single row
         """
-        data = self.read_range(self.total_range)
-        for i, row in enumerate(data[1:], start=2):
-            if row[index] == key:
-                return SheetRange(self.name, self.total_range.col_first, i, self.total_range.col_last, i)
+        # data = self.read_range(self.total_range)
+        # for i, row in enumerate(data[1:], start=2):
+        #     if row[index] == key:
+        #         return SheetRange(self.name, self.total_range.col_first, i, self.total_range.col_last, i)
+        #
+        # # todo: how do we handle this?
+        # raise Exception(f'Unable to find {key} in {self.total_range} (index {index})')
+        ret = self.get_range_by_key_index_pairs([(key, index)])
+        return ret
 
-        # todo: how do we handle this?
-        raise Exception(f'Unable to find {key} in {self.total_range} (index {index})')
-
-    def read_range(self, sheet_range: SheetRange = None) -> List[List[str]]:
+    def read_range(self, sheet_range: SheetRange = None) -> List[dict]:
         """
         Reads the given range and returns the equivalent data within the sheet
         :param sheet_range: range to read data from
@@ -76,7 +89,12 @@ class Sheet:
         if sheet_range is None:
             sheet_range = self.total_range
 
-        return self.spreadsheet.wrapper.read_sheet_range(self.spreadsheet.spreadsheet_id, sheet_range)
+        data = self.spreadsheet.wrapper.read_sheet_range(self.spreadsheet.spreadsheet_id, sheet_range)
+        ret = []
+        for row in data:
+            ret.append({header: x for header, x in zip(self.headers, row)})
+
+        return ret
 
     def append_row(self, single_row: List[str]):
         """
@@ -107,8 +125,8 @@ class EventInfoSheet(Sheet):
     models.EventInfo for more information.
     """
 
-    def __init__(self, name: str, total_range: SheetRange, spreadsheet: 'Spreadsheet'):
-        super().__init__(name, total_range, spreadsheet)
+    def __init__(self, name: str, total_range: SheetRange, spreadsheet: 'Spreadsheet', headers: List[str]):
+        super().__init__(name, total_range, spreadsheet, headers)
 
     def contains_event(self, event_id: str) -> bool:
         """
@@ -117,7 +135,7 @@ class EventInfoSheet(Sheet):
         :return: true if the event is in the sheet, false otherwise
         """
         try:
-            self.get_range_by_key(event_id, 0)
+            self.get_range_by_key(event_id, 'event_id')
             return True
         except:
             return False
@@ -128,7 +146,7 @@ class EventInfoSheet(Sheet):
         :param event_info: event info to add to the sheet
         """
         if self.contains_event(event_info.event_id):
-            self.update_range(self.get_range_by_key(event_info.event_id, 0), [event_info.to_data()])
+            self.update_range(self.get_range_by_key(event_info.event_id, 'event_id'), [event_info.to_data()])
 
     def get_event_info(self, event_id: str) -> models.EventInfo:
         """
@@ -137,14 +155,50 @@ class EventInfoSheet(Sheet):
         :return: EventInfo instance representing the given event
         """
         if self.contains_event(event_id):
-            data = self.read_range(self.get_range_by_key(event_id, 0))
+            data = self.read_range(self.get_range_by_key(event_id, 'event_id'))
             event_info = models.EventInfo(
-                data[0][0], data[0][1], models.EventInfo.team_list_from_b64(data[0][2])
+                data[0]['event_id'], data[0]['tba_key'], models.EventInfo.team_list_from_b64(data[0]['teams_b64'])
             )
             return event_info
         else:
             # todo: handle?
             raise Exception('Event info not found')
+
+
+class DraftResultsSheet(Sheet):
+    """
+    Implementation of Sheet according to the DraftResults sheet. This contains information relevant to draft results,
+    such as picks and pick order. See models for more info.
+    """
+
+    def __init__(self, name: str, total_range: SheetRange, spreadsheet: 'Spreadsheet', headers: List[str]):
+        super().__init__(name, total_range, spreadsheet, headers)
+
+    def set_pick(self, draft_results: models.DraftResults):
+        """
+        Sets the pick for the player given the specified DraftResults object.
+        :param draft_results: information containing a player's picks
+        """
+        if not self.contains_player_at_event(draft_results.player, draft_results.event_id):
+            raise Exception(f'Unable to find player {draft_results.player} at event {draft_results.event_id} in db')
+
+        srange = self.get_range_by_key_index_pairs(
+            [(draft_results.player, 'player'), (draft_results.event_id, 'event_id')])
+        data = draft_results.to_data()
+        self.update_range(srange, [data])
+
+    def contains_player_at_event(self, player: str, event_id: str):
+        """
+        Checks if the sheet has the player-event combination stored.
+        :param player: player name
+        :param event_id: SLFF event id
+        :return: true if player-event is in the sheet, false otherwise
+        """
+        try:
+            self.get_range_by_key_index_pairs([(player, 'player'), (event_id, 'event_id')])
+            return True
+        except:
+            return False
 
 
 # Todo: singleton
@@ -156,7 +210,15 @@ class Spreadsheet:
         """
         self.wrapper = SheetsWrapper()
         self.spreadsheet_id = spreadsheet_id
-        self.event_info = EventInfoSheet('EventInfo', SheetRange('EventInfo', 'A', None, 'C', None), self)
+        self.event_info = EventInfoSheet('EventInfo', SheetRange('EventInfo', 'A', None, 'C', None), self,
+                                         ['event_id', 'tba_key', 'teams_b64'])
+
+        draft_results_headers = ['player', 'event_id', 'tier', 'pick_number']
+        for i in range(1, MAX_NUM_PICKS + 1):
+            draft_results_headers.extend([f'pick{i}_time', f'pick{i}_randomed', f'pick{i}_team'])
+
+        self.draft_results = DraftResultsSheet('DraftResults', SheetRange('DraftResults', 'A', None, 'M', None), self,
+                                               draft_results_headers)
 
 
 # todo: singleton
