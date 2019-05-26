@@ -4,7 +4,7 @@ default:
 
     discord:
         bot_user_id: 573557278695882762
-        register_emoji: \U0001F44D
+        register_emoji: "\U0001F44D"
         thumbnail: https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png
         title_color: 0xe8850d
         dynaconf_merge: true

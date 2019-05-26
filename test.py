@@ -6,6 +6,7 @@ from dynaconf import settings
 assert(settings.DISCORD.TOKEN is not None)
 assert(settings.DISCORD.TITLE_COLOR == 0xe8850d)
 assert(settings.TBA.API_KEY == "9qTowkNEd3IarS0iDGB40d6Gqi4YJDlosHiLeLypQ3XfAEFeBp0bIYSqcBqB3fHb")
+print("Should be a thumbs up:", settings.DISCORD.REGISTER_EMOJI)
 
 es = FRCES(2019)
 assert(len(es.get_event_teams('2019vabla')) == 34)
