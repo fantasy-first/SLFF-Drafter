@@ -1,6 +1,7 @@
 from typing import Union, List, Dict
 
 import requests
+from dynaconf import settings
 
 
 class FRCES(object):
@@ -16,10 +17,6 @@ class FRCES(object):
         :param year: Int year to fetch events for.
         """
 
-        # todo: url config
-        self.URL_BASE = 'http://es01.usfirst.org'
-        self.EVENT_LIST_URL = '/events/_search?size=1000&source={"query":{"query_string":{"query":"(event_type:FRC)%%20AND%%20(event_season:%s)"}}}'  # (year)
-        self.EVENT_TEAMS_URL = '/teams/_search?size=1000&source={"_source":{"exclude":["awards","events"]},"query":{"query_string":{"query":"events.fk_events:%s%%20AND%%20profile_year:%s"}}}'  # (first_eid, year)
         self.session = requests.session()
         self.current_year = year
         self.event_key_map = self._get_event_key_to_id_map(year)
@@ -31,7 +28,7 @@ class FRCES(object):
         :param endpoint: String for endpoint to get data from.
         :return: Requested data in JSON format.
         """
-        return self.session.get(self.URL_BASE + endpoint).json()
+        return self.session.get(settings.ELASTICSEARCH.URL_BASE + endpoint).json()
 
     def _get_event_key_to_id_map(self, year: int) -> Dict[str, str]:
         """
@@ -40,7 +37,8 @@ class FRCES(object):
         :param year: Int year to fetch events for.
         :return: Dictionary containing the event key to ID map.
         """
-        event_list = [hit['_source'] for hit in self._get(self.EVENT_LIST_URL % year)['hits']['hits']]
+
+        event_list = [hit['_source'] for hit in self._get(settings.ELASTICSEARCH.EVENT_LIST_URL % year)['hits']['hits']]
         event_key_map = {}
         for event in event_list:
             event_key = str(year) + event['event_code'].lower()
@@ -79,7 +77,7 @@ class FRCES(object):
         if event_key in self.event_key_map:
             first_event_id = self.event_key_map[event_key]
             raw_list = [hit['_source'] for hit in
-                        self._get(self.EVENT_TEAMS_URL % (first_event_id, self.current_year))['hits']['hits']]
+                        self._get(settings.ELASTICSEARCH.EVENT_TEAMS_URL % (first_event_id, self.current_year))['hits']['hits']]
 
             team_list = []
 

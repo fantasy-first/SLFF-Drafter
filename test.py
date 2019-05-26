@@ -1,7 +1,8 @@
 from wrappers.sheets import models
-from wrappers.sheets.api import Spreadsheet, DATA_STORE_SPREADSHEET_ID
+from wrappers.sheets.api import Spreadsheet
+from dynaconf import settings
 
-spreadsheet = Spreadsheet(DATA_STORE_SPREADSHEET_ID)
+spreadsheet = Spreadsheet(settings.DRAFT.DATA_STORE_SPREADSHEET_ID)
 print(spreadsheet.event_info.contains_event('foo'))
 print(spreadsheet.event_info.contains_event('foo2'))
 spreadsheet.event_info.set_event_info(models.EventInfo('foo', '2019nyro', ['2791', '340', '3015', '5254', '20']))
