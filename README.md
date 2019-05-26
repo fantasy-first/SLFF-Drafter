@@ -5,10 +5,12 @@
 
 Requires Python 3.6+ (may work on earlier versions, we dunno)
 
-Create a file named `keys.py` in the root directory of the project that contains your Discord Bot token:
+Create a file in the `config` folder named `.secrets.yaml`, insert the following code block, and store your Discord bot token:
 
-```python
-DISCORD_TOKEN = "my_discord_token"
+```yaml
+default:	
+    discord:	
+        token: "YOUR_TOKEN_HERE" 
 ```
 
 Go to this page and enable the Google Sheets API in order to download a `credentials.json` file:
