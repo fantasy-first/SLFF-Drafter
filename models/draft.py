@@ -145,7 +145,7 @@ class Draft:
          [7,8,9]]
     """
 
-    def get_team_square(self, cols=8) -> List[List[str]]:
+    def get_team_square(self, cols: int = 8) -> List[List[str]]:
         team_list = self.get_team_list()
         return [team_list[i:i + cols] for i in range(0, len(team_list), cols)]
 

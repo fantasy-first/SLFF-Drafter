@@ -15,6 +15,8 @@ class FRCES(object):
         
         :param year: Int year to fetch events for.
         """
+
+        # todo: url config
         self.URL_BASE = 'http://es01.usfirst.org'
         self.EVENT_LIST_URL = '/events/_search?size=1000&source={"query":{"query_string":{"query":"(event_type:FRC)%%20AND%%20(event_season:%s)"}}}'  # (year)
         self.EVENT_TEAMS_URL = '/teams/_search?size=1000&source={"_source":{"exclude":["awards","events"]},"query":{"query_string":{"query":"events.fk_events:%s%%20AND%%20profile_year:%s"}}}'  # (first_eid, year)
@@ -46,12 +48,12 @@ class FRCES(object):
 
         return event_key_map
 
-    def event_teams(self, event: str, simple: bool = False, keys: bool = False) -> Union[List[str], List[Dict]]:
+    def get_event_teams(self, event_key: str, simple: bool = False, keys: bool = False) -> Union[List[str], List[Dict]]:
         """
         Get list of teams at an event. 
         NOTE: Home championships are not calculated.
         
-        :param event: Event key to get data on.
+        :param event_key: Event key to get data on.
         :param simple: Get only vital data.
         :param keys: Return list of team keys only rather than full data on every team.
         :return: List of string keys or team objects.
@@ -69,8 +71,8 @@ class FRCES(object):
                      'city': 'team_city'
                      }
 
-        if event in self.event_key_map:
-            first_event_id = self.event_key_map[event]
+        if event_key in self.event_key_map:
+            first_event_id = self.event_key_map[event_key]
             raw_list = [hit['_source'] for hit in
                         self._get(self.EVENT_TEAMS_URL % (first_event_id, self.current_year))['hits']['hits']]
 

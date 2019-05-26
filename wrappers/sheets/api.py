@@ -8,14 +8,14 @@ from googleapiclient.discovery import build
 
 from wrappers.sheets import models
 
-# Reference: https://developers.google.com/sheets/api/quickstart/python
-
-# If modifying these scopes, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+# Reference: https://developers.google.com/sheets/api/quickstart/python\
 
 # The ID and range of a sample spreadsheet.
 SAMPLE_SPREADSHEET_ID = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
 
+# todo: config
+# If modifying these scopes, delete the file token.pickle.
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 DATA_STORE_SPREADSHEET_ID = '1rvjsDfInf9KWFUwwVjDwz2ZADeD_4Fx3LMmNws7exss'
 CREDS_CACHE_FILENAME = 'token.pickle'
 CREDENTIALS_JSON = 'credentials.json'
