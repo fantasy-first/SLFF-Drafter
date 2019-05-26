@@ -70,15 +70,7 @@ class Sheet:
         :param index: index in the row to search for the value
         :return: a SheetRange representing a single row
         """
-        # data = self.read_range(self.total_range)
-        # for i, row in enumerate(data[1:], start=2):
-        #     if row[index] == key:
-        #         return SheetRange(self.name, self.total_range.col_first, i, self.total_range.col_last, i)
-        #
-        # # todo: how do we handle this?
-        # raise Exception(f'Unable to find {key} in {self.total_range} (index {index})')
-        ret = self.get_range_by_key_index_pairs([(key, index)])
-        return ret
+        return self.get_range_by_key_index_pairs([(key, index)])
 
     def read_range(self, sheet_range: SheetRange = None) -> List[dict]:
         """
