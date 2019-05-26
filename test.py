@@ -1,6 +1,14 @@
 from wrappers.sheets import models
 from wrappers.sheets.api import Spreadsheet
+from wrappers.firstelastic import FRCES
 from dynaconf import settings
+
+assert(settings.DISCORD.TOKEN is not None)
+assert(settings.DISCORD.TITLE_COLOR == 0xe8850d)
+assert(settings.TBA.API_KEY == "9qTowkNEd3IarS0iDGB40d6Gqi4YJDlosHiLeLypQ3XfAEFeBp0bIYSqcBqB3fHb")
+
+es = FRCES(2019)
+assert(len(es.get_event_teams('2019vabla')) == 34)
 
 spreadsheet = Spreadsheet(settings.DRAFT.DATA_STORE_SPREADSHEET_ID)
 print(spreadsheet.event_info.contains_event('foo'))

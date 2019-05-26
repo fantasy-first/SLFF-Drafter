@@ -10,7 +10,8 @@ Create a file in the `config` folder named `.secrets.yaml`, insert the following
 ```yaml
 default:	
     discord:	
-        token: "YOUR_TOKEN_HERE" 
+        token: YOUR_TOKEN_HERE
+        dynaconf_merge: true 
 ```
 
 Go to this page and enable the Google Sheets API in order to download a `credentials.json` file:
