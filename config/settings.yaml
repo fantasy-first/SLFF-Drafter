@@ -7,6 +7,7 @@ default:
         register_emoji: "\U0001F44D"
         thumbnail: 'https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png'
         title_color: 0xe8850d
+        dynaconf_merge: true
 
     google:
         scopes: ['https://www.googleapis.com/auth/spreadsheets']
