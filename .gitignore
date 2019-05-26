@@ -1,8 +1,10 @@
-# SLFF-Drafter specific
+﻿# SLFF-Drafter specific
 
 keys.py
 credentials.json
 token.pickle
+config/\.secrets\*
+
 
 # =====================================================================================================================
 
@@ -222,3 +224,7 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python,pycharm+all
+Include/
+Scripts/
+tcl/
+

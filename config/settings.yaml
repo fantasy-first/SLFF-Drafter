@@ -1,0 +1,25 @@
+default:
+    tba:
+        api_key: 9qTowkNEd3IarS0iDGB40d6Gqi4YJDlosHiLeLypQ3XfAEFeBp0bIYSqcBqB3fHb
+
+    discord:
+        bot_user_id: 573557278695882762
+        register_emoji: "\U0001F44D"
+        thumbnail: https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png
+        title_color: 0xe8850d
+        dynaconf_merge: true
+
+    google:
+        scopes: ['https://www.googleapis.com/auth/spreadsheets']
+        creds_cache_filename: token.pickle
+        credentials_json: credentials.json
+
+    draft:
+        data_store_spreadsheet_id: 1rvjsDfInf9KWFUwwVjDwz2ZADeD_4Fx3LMmNws7exss
+        max_picks: 3
+
+    elasticsearch:
+        url_base: http://es01.usfirst.org
+        event_list_url: /events/_search?size=1000&source={"query":{"query_string":{"query":"(event_type:FRC)%%20AND%%20(event_season:%s)"}}}
+        event_teams_url: /teams/_search?size=1000&source={"_source":{"exclude":["awards","events"]},"query":{"query_string":{"query":"events.fk_events:%s%%20AND%%20profile_year:%s"}}}
+

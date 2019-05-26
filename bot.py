@@ -4,18 +4,13 @@ from typing import Dict
 import discord
 from discord.ext import commands
 from tabulate import tabulate
-
-from keys import DISCORD_TOKEN
+from dynaconf import settings
 from models.draft import Draft
-
-BOT_USER_ID = 573557278695882762
-
-REGISTER_EMOJI = u"\U0001F44D"
 
 Client = discord.Client()
 bot = commands.Bot(command_prefix=".")
 
-# tba = tbapy.TBA('9qTowkNEd3IarS0iDGB40d6Gqi4YJDlosHiLeLypQ3XfAEFeBp0bIYSqcBqB3fHb')
+# tba = tbapy.TBA(settings.tba.api_key)
 
 nextIdNum = 1
 
@@ -57,7 +52,6 @@ async def ping(ctx):
     Example: .init "MidKnight Mayhem" 2019-05-02 12:00 15:00
 """
 
-
 # TODO fix this broken function
 @bot.command(pass_context=True)
 async def test(ctx):
@@ -76,7 +70,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         reg_close_time_dt = datetime.datetime.strptime(reg_close, '%Y-%m-%d %H:%M %z')
         reg_close_time_dt += datetime.timedelta(hours=12)
     except ValueError:
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `init`")
         embed.add_field(
             name='Invalid date or time for registration close',
             value="Please check your date and/or time to close registration and try again",
@@ -89,7 +83,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         draft_begin_time_dt = datetime.datetime.strptime(draft_begin, '%Y-%m-%d %H:%M %z')
         draft_begin_time_dt += datetime.timedelta(hours=12)
     except ValueError:
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `init`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `init`")
         embed.add_field(
             name='Invalid date or time for draft beginning',
             value="Please check your date and/or time to begin the draft and try again",
@@ -111,24 +105,24 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     readable_draft_begin_time = get_readable_datetime(draft_begin_time_dt)
 
     title_msg = f'Created draft for "{event_name}" [id: {draft_key}]'
-    embed = discord.Embed(color=0xe8850d, title=title_msg)
-    embed.add_field(name='To register for this draft:', value=f'React to this message with {REGISTER_EMOJI}')
+    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=title_msg)
+    embed.add_field(name='To register for this draft:', value=f'React to this message with {settings.DISCORD.REGISTER_EMOJI}')
     embed.add_field(name='Registration closes at:', value=readable_reg_close_time, inline=False)
     embed.add_field(name='Draft starts at:', value=readable_draft_begin_time, inline=False)
-    embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/303583753022865408/539892100737531921/moon.png')
+    embed.set_thumbnail(url=settings.DISCORD.THUMBNAIL)
 
     sent = await ctx.send(embed=embed)
 
     draft.set_join_message_id(sent.id)
     drafts[draft_key] = draft
 
-    await sent.add_reaction(REGISTER_EMOJI)
+    await sent.add_reaction(settings.DISCORD.REGISTER_EMOJI)
 
 
 @bot.command(pass_context=True)
 async def add_teams(ctx, draft_key, *args):
     if draft_key not in drafts:
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `.addteams`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `.addteams`")
         embed.add_field(
             name='Invalid draft key',
             value="Please check your draft key and try again",
@@ -137,7 +131,7 @@ async def add_teams(ctx, draft_key, *args):
         await ctx.send(embed=embed)
         return
     if not drafts[draft_key].add_teams(args):
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `.addteams`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `.addteams`")
         embed.add_field(
             name='Invalid team number(s)',
             value="Please check your team list and try again",
@@ -147,7 +141,7 @@ async def add_teams(ctx, draft_key, *args):
         return
     new_teams = ", ".join(str(t) for t in args)
     team_list = ", ".join(drafts[draft_key].get_team_list())
-    embed = discord.Embed(color=0xe8850d, title=f"Successfully updated [{draft_key}]")
+    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=f"Successfully updated [{draft_key}]")
     embed.add_field(
         name='Team List',
         value=f'{team_list}',
@@ -159,7 +153,7 @@ async def add_teams(ctx, draft_key, *args):
 @bot.command(pass_context=True)
 async def remove_teams(ctx, draft_key, *args):
     if draft_key not in drafts:
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `.removeteams`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `.removeteams`")
         embed.add_field(
             name='Invalid draft key',
             value="Please check your draft key and try again",
@@ -168,7 +162,7 @@ async def remove_teams(ctx, draft_key, *args):
         await ctx.send(embed=embed)
         return
     if not drafts[draft_key].remove_teams(args):
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `.removeteams`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `.removeteams`")
         embed.add_field(
             name='Invalid team number(s)',
             value="Please check your team list and try again",
@@ -178,7 +172,7 @@ async def remove_teams(ctx, draft_key, *args):
         return
     newTeams = ", ".join(str(t) for t in args)
     teamList = ", ".join(drafts[draft_key].get_team_list())
-    embed = discord.Embed(color=0xe8850d, title=f"Successfully removed from team list for [{draft_key}]")
+    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=f"Successfully removed from team list for [{draft_key}]")
     embed.add_field(
         name='Removed {}'.format(newTeams),
         value="New team list: {}".format(teamList),
@@ -192,7 +186,7 @@ async def set_key(ctx, draft_key, event_key):
     if draft_key in drafts:
         drafts[draft_key].set_event_key(event_key)
         name = drafts[draft_key].get_name()
-        embed = discord.Embed(color=0xe8850d, title="TBA key for {} set".format(name))
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="TBA key for {} set".format(name))
         embed.add_field(
             name=f'TBA Key for {name} [{draft_key}] is now {event_key}',
             value=f"Either key can be used to reference {name}",
@@ -200,7 +194,7 @@ async def set_key(ctx, draft_key, event_key):
         )
         await ctx.send(embed=embed)
     else:
-        embed = discord.Embed(color=0xe8850d, title="ERROR in `.setkey`")
+        embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `.setkey`")
         embed.add_field(
             name=f'No draft found with key [{draft_key}]',
             value="Please check your draft key and try again",
@@ -252,7 +246,7 @@ async def start(ctx, draft_key):
 
     team_list = draft.get_team_square()
 
-    embed = discord.Embed(color=0xe8850d, title=event_name)
+    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=event_name)
     embed.add_field(name='Picks', value=f'```{tabulate(table, headers, tablefmt="presto")}```',
                     inline=True)
     embed.add_field(name='Available', value=f'```{tabulate(team_list)}```')
@@ -285,12 +279,12 @@ async def get_participants_from_reacts(ctx, draft):
     msg = await ctx.fetch_message(msg_id)
     participants = []
     for reaction in msg.reactions:
-        if reaction.emoji == REGISTER_EMOJI:
+        if reaction.emoji == settings.DISCORD.REGISTER_EMOJI:
             async for user in reaction.users():
-                if user.id != BOT_USER_ID:
+                if user.id != settings.DISCORD.BOT_USER_ID:
                     participants.append(user.id)
     return participants
 
 
 if __name__ == "__main__":
-    bot.run(DISCORD_TOKEN)
+    bot.run(settings.DISCORD.TOKEN)

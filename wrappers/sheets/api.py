@@ -5,22 +5,11 @@ from typing import Union, List, Tuple
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from dynaconf import settings
 
 from wrappers.sheets import models
 
 # Reference: https://developers.google.com/sheets/api/quickstart/python\
-
-# The ID and range of a sample spreadsheet.
-SAMPLE_SPREADSHEET_ID = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
-
-# todo: config
-# If modifying these scopes, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-DATA_STORE_SPREADSHEET_ID = '1rvjsDfInf9KWFUwwVjDwz2ZADeD_4Fx3LMmNws7exss'
-CREDS_CACHE_FILENAME = 'token.pickle'
-CREDENTIALS_JSON = 'credentials.json'
-MAX_NUM_PICKS = 3
-
 
 class SheetRange:
     """
@@ -206,7 +195,7 @@ class Spreadsheet:
                                          ['event_id', 'tba_key', 'teams_b64'])
 
         draft_results_headers = ['player', 'event_id', 'tier', 'pick_number']
-        for i in range(1, MAX_NUM_PICKS + 1):
+        for i in range(1, settings.DRAFT.MAX_PICKS + 1):
             draft_results_headers.extend([f'pick{i}_time', f'pick{i}_randomed', f'pick{i}_team'])
 
         self.draft_results = DraftResultsSheet('DraftResults', SheetRange('DraftResults', 'A', None, 'M', None), self,
@@ -220,8 +209,8 @@ class SheetsWrapper:
         # The file token.pickle stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
-        if os.path.exists(CREDS_CACHE_FILENAME):
-            with open(CREDS_CACHE_FILENAME, 'rb') as token:
+        if os.path.exists(settings.GOOGLE.CREDS_CACHE_FILENAME):
+            with open(settings.GOOGLE.CREDS_CACHE_FILENAME, 'rb') as token:
                 creds = pickle.load(token)
 
         # If there are no (valid) credentials available, let the user log in.
@@ -229,11 +218,11 @@ class SheetsWrapper:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_JSON, SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(settings.GOOGLE.CREDENTIALS_JSON, settings.GOOGLE.SCOPES)
                 creds = flow.run_local_server()
 
             # Save the credentials for next run
-            with open(CREDS_CACHE_FILENAME, 'wb') as token:
+            with open(settings.GOOGLE.CREDS_CACHE_FILENAME, 'wb') as token:
                 pickle.dump(creds, token)
 
         # Build and store objects for future use
