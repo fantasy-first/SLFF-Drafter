@@ -198,12 +198,20 @@ class RegistrationSheet(Sheet):
         :param event_id: the slff event id for the draft
         :param player_id: the id of the player drafting
         """
+        self.add_batch_registration(event_id, [player_id])
+
+    def add_batch_registration(self, event_id: str, player_ids: List[str]):
+        """
+        Adds multiple players to the registration list for a given draft
+        :param event_id: the slff event id for the draft
+        :param player_ids: the ids of the players drafting
+        """
         if not self.has_event_stored(event_id):
             raise Exception(f'Unable to find event_id "{event_id}" in Registration sheet')
 
         srange = self.get_range_by_key(event_id, 'event_id')
         reg = self.get_registration_info(event_id)
-        reg.player_list.append(player_id)
+        reg.player_list.extend(player_ids)
         self.update_range(srange, [reg.to_data()])
 
     def get_registration_info(self, event_id: str) -> models.Registration:

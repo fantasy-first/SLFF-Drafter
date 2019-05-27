@@ -256,8 +256,7 @@ async def start(ctx, draft_key: str):
     # todo: check for race conditions with changing usernames?
     draft.set_players(usernames)
     # todo: should we add api stuff to the draft model or keep it here?
-    for p in participants:
-        spreadsheet.registration.add_registration(draft_key, str(p))
+    spreadsheet.registration.add_batch_registration(draft_key, [str(p) for p in participants])
 
     draft.start()
     table = draft.get_information()
