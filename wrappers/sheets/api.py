@@ -2,12 +2,13 @@ import os.path
 import pickle
 from typing import Union, List, Tuple
 
+from dynaconf import settings
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from dynaconf import settings
 
 from wrappers.sheets import models
+
 
 # Reference: https://developers.google.com/sheets/api/quickstart/python\
 
@@ -182,6 +183,64 @@ class DraftResultsSheet(Sheet):
             return False
 
 
+class RegistrationSheet(Sheet):
+    """
+    Implementation of sheet according to Registration sheet. This contains information regarding which players have
+    registered for which drafts.
+    """
+
+    def __init__(self, name: str, total_range: SheetRange, spreadsheet: 'Spreadsheet', headers: List[str]):
+        super().__init__(name, total_range, spreadsheet, headers)
+
+    def add_registration(self, event_id: str, player_id: str):
+        """
+        Adds a player to the registration list for a given draft
+        :param event_id: the slff event id for the draft
+        :param player_id: the id of the player drafting
+        """
+        if not self.has_event_stored(event_id):
+            raise Exception(f'Unable to find event_id "{event_id}" in Registration sheet')
+
+        srange = self.get_range_by_key(event_id, 'event_id')
+        reg = self.get_registration_info(event_id)
+        reg.player_list.append(player_id)
+        self.update_range(srange, [reg.to_data()])
+
+    def get_registration_info(self, event_id: str) -> models.Registration:
+        """
+        Retrieves registration info from the sheet.
+        :param event_id: SLFF event id
+        :return: current registration data
+        """
+        srange = self.get_range_by_key(event_id, 'event_id')
+        data = self.read_range(srange)[0]
+        return models.Registration(
+            event_id=data['event_id'], message_id=data['message_id'],
+            player_list=models.Registration.player_list_from_b64(data.get('players_b64', ''))
+        )
+
+    def has_event_stored(self, event_id: str) -> bool:
+        """
+        Checks if the Registration sheet contains the given event ID
+        :param event_id: SLFF event id
+        :return: true if the event is in the Registration sheet, false otherwise
+        """
+        try:
+            self.get_range_by_key_index_pairs([(event_id, 'event_id')])
+            return True
+        except:
+            return False
+
+    def add_event(self, event_id: str, message_id: str):
+        """
+        Adds an event to the Registration sheet
+        :param event_id: SLFF event id
+        :param message_id: message ID from the bot that people react to in order to sign up
+        """
+        if not self.has_event_stored(event_id):
+            self.append_row([event_id, message_id, ''])
+
+
 # Todo: singleton
 class Spreadsheet:
     def __init__(self, spreadsheet_id: str):
@@ -201,6 +260,9 @@ class Spreadsheet:
         self.draft_results = DraftResultsSheet('DraftResults', SheetRange('DraftResults', 'A', None, 'M', None), self,
                                                draft_results_headers)
 
+        self.registration = RegistrationSheet('Registration', SheetRange('Registration', 'A', None, 'C', None), self,
+                                              ['event_id', 'message_id', 'players_b64'])
+
 
 # todo: singleton
 class SheetsWrapper:
@@ -218,7 +280,8 @@ class SheetsWrapper:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(settings.GOOGLE.CREDENTIALS_JSON, settings.GOOGLE.SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(settings.GOOGLE.CREDENTIALS_JSON,
+                                                                 settings.GOOGLE.SCOPES)
                 creds = flow.run_local_server()
 
             # Save the credentials for next run

@@ -3,12 +3,16 @@ from typing import Dict
 
 import discord
 from discord.ext import commands
-from tabulate import tabulate
 from dynaconf import settings
+from tabulate import tabulate
+
 from models.draft import Draft
+from wrappers.sheets.api import Spreadsheet
 
 Client = discord.Client()
 bot = commands.Bot(command_prefix=".")
+
+spreadsheet = Spreadsheet(settings.DRAFT.DATA_STORE_SPREADSHEET_ID)
 
 # tba = tbapy.TBA(settings.tba.api_key)
 
@@ -52,6 +56,7 @@ async def ping(ctx):
     Example: .init "MidKnight Mayhem" 2019-05-02 12:00 15:00
 """
 
+
 # TODO fix this broken function
 @bot.command(pass_context=True)
 async def test(ctx):
@@ -72,7 +77,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     except ValueError:
         embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `init`")
         embed.add_field(
-            name='Invalid date or time for registration close',
+            name=f'Invalid date or time for registration close ("{reg_close_time}")',
             value="Please check your date and/or time to close registration and try again",
             inline=False,
         )
@@ -85,7 +90,7 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     except ValueError:
         embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title="ERROR in `init`")
         embed.add_field(
-            name='Invalid date or time for draft beginning',
+            name=f'Invalid date or time for draft begin ("{draft_begin_time}")',
             value="Please check your date and/or time to begin the draft and try again",
             inline=False,
         )
@@ -106,7 +111,8 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
 
     title_msg = f'Created draft for "{event_name}" [id: {draft_key}]'
     embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=title_msg)
-    embed.add_field(name='To register for this draft:', value=f'React to this message with {settings.DISCORD.REGISTER_EMOJI}')
+    embed.add_field(name='To register for this draft:',
+                    value=f'React to this message with {settings.DISCORD.REGISTER_EMOJI}')
     embed.add_field(name='Registration closes at:', value=readable_reg_close_time, inline=False)
     embed.add_field(name='Draft starts at:', value=readable_draft_begin_time, inline=False)
     embed.set_thumbnail(url=settings.DISCORD.THUMBNAIL)
@@ -117,6 +123,19 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
     drafts[draft_key] = draft
 
     await sent.add_reaction(settings.DISCORD.REGISTER_EMOJI)
+    spreadsheet.registration.add_event(draft_key, str(sent.id))
+
+
+@init.error
+async def init_error(ctx, error):
+    usage = '.init event_name draft_date reg_close_time draft_begin_time'
+    example = '.init IRI 2019-05-30 7:00 8:00'
+
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f'Usage: `{usage}`\n'
+                       f'Example: `{example}`')
+    else:  # uhhh
+        await ctx.send(f'err: {error} ({type(error)})')
 
 
 @bot.command(pass_context=True)
@@ -172,7 +191,8 @@ async def remove_teams(ctx, draft_key, *args):
         return
     newTeams = ", ".join(str(t) for t in args)
     teamList = ", ".join(drafts[draft_key].get_team_list())
-    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=f"Successfully removed from team list for [{draft_key}]")
+    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR,
+                          title=f"Successfully removed from team list for [{draft_key}]")
     embed.add_field(
         name='Removed {}'.format(newTeams),
         value="New team list: {}".format(teamList),
@@ -210,7 +230,7 @@ async def set_players(ctx, draftKey, *args):
 
 
 @bot.command(pass_context=True)
-async def start(ctx, draft_key):
+async def start(ctx, draft_key: str):
     """Initialize a Draft"""
 
     # # Check if there is an event key
@@ -229,6 +249,16 @@ async def start(ctx, draft_key):
     #     event_name = event_data['name']
 
     draft = get_draft(draft_key)
+    participants = await get_participants_from_reacts(ctx, draft)
+    users = [await bot.fetch_user(p) for p in participants]
+    usernames = [u.name for u in users]
+
+    # todo: check for race conditions with changing usernames?
+    draft.set_players(usernames)
+    # todo: should we add api stuff to the draft model or keep it here?
+    for p in participants:
+        spreadsheet.registration.add_registration(draft_key, str(p))
+
     draft.start()
     table = draft.get_information()
     # attending_teams_data = tba.event_teams(event_key)
@@ -272,7 +302,7 @@ async def waiver(ctx, mode, event_key, *args):
             pass
 
 
-async def get_participants_from_reacts(ctx, draft):
+async def get_participants_from_reacts(ctx, draft: Draft):
     msg_id = draft.get_join_message_id()
     if msg_id is None:
         return None
@@ -284,6 +314,12 @@ async def get_participants_from_reacts(ctx, draft):
                 if user.id != settings.DISCORD.BOT_USER_ID:
                     participants.append(user.id)
     return participants
+
+
+# todo: refactor this into separate file
+# note: need access to the bot object instance for that^ to work; some import magic needed
+async def registration_background_task():
+    await bot.wait_until_ready()
 
 
 if __name__ == "__main__":
