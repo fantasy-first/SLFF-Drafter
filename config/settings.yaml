@@ -16,7 +16,11 @@ default:
 
     draft:
         data_store_spreadsheet_id: 1rvjsDfInf9KWFUwwVjDwz2ZADeD_4Fx3LMmNws7exss
-        max_picks: 3
+        max_round_count: 12
+        default_round_count: 3
+        first_round_minutes: 3
+        other_round_minutes: 2
+
 
     elasticsearch:
         url_base: http://es01.usfirst.org
