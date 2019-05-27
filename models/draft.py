@@ -1,6 +1,7 @@
 import datetime
 import random
 from typing import List, Tuple, Set
+from dynaconf import settings
 
 import tabulate
 
@@ -14,7 +15,8 @@ class DraftState:
 class Draft:
     next_id_num = 1  # TODO read this from somewhere
 
-    def __init__(self, name: str, reg_close_time: datetime.datetime, draft_begin_time: datetime.datetime):
+    def __init__(self, name: str, reg_close_time: datetime.datetime, draft_begin_time: datetime.datetime,
+                 num_picks: int = settings.DRAFT.DEFAULT_ROUND_COUNT):
         """
         @param name: a string representing a human-readable name for the event
         @param reg_close_time: a datetime object corresponding to the close of signups
@@ -23,6 +25,7 @@ class Draft:
         self.name = name
         self.reg_close_time = reg_close_time
         self.draft_begin_time = draft_begin_time
+        self.num_picks = num_picks
         self.draft_key = self.get_new_draft_key()
         self.team_list = set()
         self.player_list = set()
@@ -59,13 +62,17 @@ class Draft:
             # TODO instead of just showing time slots, show picks that have happened too
             table = []
             n_players = len(self.player_list)
-            # table.append(["Player", "Pick 1", "Pick 2", "Pick 3"])
+
+            header_list = ["Player"]
+            header_list += ["Pick " + str(i) for i in range(1, self.num_picks + 1)]
+
+            table.append(header_list)
             for i, player in enumerate(self.player_list):
-                first_pick_slot = self.time_slots[i].strftime("%I:%M")
-                second_pick_slot = self.time_slots[2 * n_players - 1 - i].strftime("%I:%M")
-                third_pick_slot = self.time_slots[2 * n_players + i].strftime("%I:%M")
-                table.append([player, first_pick_slot, second_pick_slot, third_pick_slot])
-            print(tabulate.tabulate(table))
+                table_row = [player]
+                for rnd in range(1, self.num_picks + 1):
+                    slot_calc = int(2 * int(rnd / 2) * n_players + ((rnd - 1) % 2) * (-i - 1) + (rnd % 2) * i)
+                    table_row.append(self.time_slots[slot_calc].strftime("%I:%M"))
+                table.append(table_row)
             return table
 
     """
@@ -84,25 +91,18 @@ class Draft:
 
     def generate_time_slots(
             self,
-            first_pick_time: int = 3,
-            second_pick_time: int = 2,
-            third_pick_time: int = 2):
+            first_round_time: int = settings.DRAFT.FIRST_ROUND_MINUTES,
+            other_round_time: int = settings.DRAFT.OTHER_ROUND_MINUTES):
         n_players = len(self.player_list)
         slots = [self.draft_begin_time]
-        first_round_delta = datetime.timedelta(seconds=60 * first_pick_time)
+
+        first_round_delta = datetime.timedelta(seconds=60 * first_round_time)
         for i in range(n_players - 1):
-            last_slot = slots[-1]
-            slots.append(last_slot + first_round_delta)
+            slots.append(slots[-1] + first_round_delta)
 
-        second_round_delta = datetime.timedelta(seconds=60 * second_pick_time)
-        for i in range(n_players):
-            last_slot = slots[-1]
-            slots.append(last_slot + second_round_delta)
-
-        third_round_delta = datetime.timedelta(seconds=60 * third_pick_time)
-        for i in range(n_players):
-            last_slot = slots[-1]
-            slots.append(last_slot + third_round_delta)
+        other_round_delta = datetime.timedelta(seconds=60 * other_round_time)
+        for i in range(n_players * (self.num_picks - 1)):
+            slots.append(slots[-1] + other_round_delta)
 
         self.time_slots = slots
 
@@ -182,7 +182,7 @@ class Draft:
 if __name__ == "__main__":
     start = datetime.datetime.strptime("2019-05-02 18:00", '%Y-%m-%d %H:%M')
     reg_close = datetime.datetime.strptime("2019-05-02 12:00", '%Y-%m-%d %H:%M')
-    draft = Draft("Test Draft", reg_close, start)
+    draft = Draft("Test Draft", reg_close, start, 8)
     draft.set_players({"Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"})
     draft.add_teams([str(i) for i in range(1, 31)])
     draft.start()
