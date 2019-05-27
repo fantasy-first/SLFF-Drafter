@@ -82,3 +82,41 @@ class DraftResults:
             ret.extend([pick.time, pick.randomed, pick.team])
 
         return ret
+
+
+class Registration:
+    def __init__(self, event_id: str, message_id: str, player_list: List[str]):
+        """
+        Class to hold draft registration data
+        :param event_id: SLFF event id
+        :param message_id: bot's message ID that people react to in order to sign up
+        :param player_list: list of player IDs that are signed up for the draft
+        """
+        self.event_id = event_id
+        self.message_id = message_id
+        self.player_list = player_list
+
+    def to_data(self) -> List[Optional[str]]:
+        """
+        Converts object to data needed to post to the sheet.
+        :return: a list representing registration data
+        """
+        players = ','.join(self.player_list)
+
+        # base 64 encode the player list so it's easier to handle CSVs when we don't know how many players
+        # will drafting the event
+        teams_b64 = b64encode(players.encode()).decode()
+        return [self.event_id, self.message_id, teams_b64]
+
+    @staticmethod
+    def player_list_from_b64(players_b64: str) -> List[str]:
+        """
+        Helper class to convert from/to b64
+        :param players_b64: the b64 encoded comma-separated player list
+        :return: a list of player IDs
+        """
+        if players_b64 == '':
+            return []
+
+        decoded = b64decode(players_b64).decode()
+        return decoded.split(',')
