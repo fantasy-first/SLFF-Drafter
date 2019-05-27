@@ -240,7 +240,7 @@ async def start(ctx, draft_key):
     # random_list = attending_teams
     # shuffle(random_list)
 
-    headers = ["Player", "Pick 1", "Pick 2", "Pick 3"]
+    headers = draft.get_table_header()
 
     event_name = draft.get_name()
 

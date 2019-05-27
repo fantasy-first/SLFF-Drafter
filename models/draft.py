@@ -54,6 +54,9 @@ class Draft:
     def get_draft_begin_time(self) -> datetime.datetime:
         return self.draft_begin_time
 
+    def get_table_header(self) -> List[str]:
+        return ["Player"] + ["Pick " + str(i) for i in range(1, self.num_picks + 1)]
+
     def get_information(self) -> List[List[str]]:
         if self.state == DraftState.BEFORE:
             # TODO provide a preview with signed up players, the current team list, any other fun stats
@@ -63,10 +66,6 @@ class Draft:
             table = []
             n_players = len(self.player_list)
 
-            header_list = ["Player"]
-            header_list += ["Pick " + str(i) for i in range(1, self.num_picks + 1)]
-
-            table.append(header_list)
             for i, player in enumerate(self.player_list):
                 table_row = [player]
                 for rnd in range(1, self.num_picks + 1):
@@ -186,4 +185,6 @@ if __name__ == "__main__":
     draft.set_players({"Brian_Maher", "pchild", "BrennanB", "jtrv", "jlmcmchl", "tmpoles", "saikiranra", "TDav540"})
     draft.add_teams([str(i) for i in range(1, 31)])
     draft.start()
-    print(tabulate.tabulate(draft.get_information()))
+    table = draft.get_information()
+    headers = draft.get_table_header()
+    print(tabulate.tabulate(table, headers, tablefmt="presto"))
