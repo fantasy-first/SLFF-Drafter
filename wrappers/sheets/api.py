@@ -195,7 +195,7 @@ class Spreadsheet:
                                          ['event_id', 'tba_key', 'teams_b64'])
 
         draft_results_headers = ['player', 'event_id', 'tier', 'pick_number']
-        for i in range(1, settings.DRAFT.MAX_PICKS + 1):
+        for i in range(1, settings.DRAFT.MAX_ROUND_COUNT + 1):
             draft_results_headers.extend([f'pick{i}_time', f'pick{i}_randomed', f'pick{i}_team'])
 
         self.draft_results = DraftResultsSheet('DraftResults', SheetRange('DraftResults', 'A', None, 'M', None), self,
