@@ -201,13 +201,15 @@ class AbstractRow(ABC):
         if item in self.__prop_tracker:
             return super().__getattribute__(item)
 
+        self.refresh()
+        return super().__getattribute__(item)
+
+    def refresh(self):
         srange = self.get_sheet_range()
         data = self.worksheet.read_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, srange)[0]
         for col_name, val in data.items():
             self.__setattr__(col_name, val)
             self.__prop_tracker[col_name] = DataStatus.FRESH
-
-        return super().__getattribute__(item)
 
     def get_sheet_range(self) -> SheetRange:
         return self.worksheet.get_range_by_key_index_pairs([
