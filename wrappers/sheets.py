@@ -3,14 +3,12 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Tuple, Optional, Dict, Type
+from typing import List, Tuple, Optional, Dict
 
 from dynaconf import settings
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-
-from util.convert import list_to_b64, b64_to_list
 
 
 class DataStatus(Enum):
@@ -224,10 +222,20 @@ class AbstractRow(ABC):
 
     def save(self):
         self.pre_save()
-        sr = self.get_sheet_range()
-        self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, sr, [
-            [getattr(self, v) for v in self.worksheet.headers]
-        ])
+
+        try:
+            sr = self.get_sheet_range()
+            self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, sr, [
+                [getattr(self, v) for v in self.worksheet.headers]
+            ])
+        except Exception:  # todo: custom exception from get_sheet_range
+            self.worksheet.append_sheet_range(
+                settings.DRAFT.DATA_STORE_SPREADSHEET_ID,
+                self.worksheet.sheet_range,
+                [
+                    [getattr(self, v) for v in self.worksheet.headers]
+                ]
+            )
 
     @staticmethod
     @abstractmethod
@@ -243,62 +251,3 @@ class AbstractRow(ABC):
     def __eq__(self, other):
         return isinstance(other, AbstractRow) and all(
             [getattr(self, k) == getattr(other, k) for k in self.get_identifiers()])
-
-
-class ExampleSheet(AbstractWorksheet):
-    @property
-    def row_class(self) -> Type[AbstractRow]:
-        return ExampleRow
-
-    @property
-    def headers(self):
-        return ['event_id', 'tba_key', 'teams_b64']
-
-    @property
-    def sheet_range(self):
-        return SheetRange('EventInfo', 'A', None, 'C', None)
-
-    @property
-    def name(self):
-        return 'EventInfo'
-
-
-ex = ExampleSheet()
-
-
-class ExampleRow(AbstractRow):
-    @staticmethod
-    def get_identifiers() -> List[str]:
-        return ['event_id']
-
-    @property
-    def worksheet(self) -> AbstractWorksheet:
-        global ex
-        return ex
-
-    def post_refresh(self):
-        if type(self.teams_b64) is str:
-            self.teams_b64 = b64_to_list(self.teams_b64)
-
-    def pre_save(self):
-        if type(self.teams_b64) is list:
-            self.teams_b64 = list_to_b64(self.teams_b64)
-
-
-if __name__ == '__main__':
-    # given the following sheet in gsheets
-    # row1: event_id, tba_key, teams_B64
-    # row2: foo, 2019nyro, asjuieofnasiluefh
-
-    # r = ExampleRow()
-    # r.event_id = 'foo'
-    # print(r.tba_key)  # prints 2019nyro
-    # r.tba_key = '2018nyro'
-    # r.save()  # commits 2018nyro to the sheet
-    # print(r.tba_key)  # prints 2018nyro
-
-    rows = ex.get_all_rows()
-    print(rows[0].event_id, rows[0].tba_key, rows[0].teams_b64)
-    print(rows[1].event_id, rows[1].tba_key, rows[1].teams_b64)
-
-    print(ExampleRow(event_id='foo').tba_key)
