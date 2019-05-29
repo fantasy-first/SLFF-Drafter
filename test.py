@@ -1,5 +1,5 @@
-from wrappers.sheets import models
-from wrappers.sheets.api import Spreadsheet
+from sheets import models
+from sheets import Spreadsheet
 from wrappers.firstelastic import FRCES
 from dynaconf import settings
 

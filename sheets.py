@@ -10,6 +10,8 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+from util.convert import list_to_b64, b64_to_list
+
 
 class DataStatus(Enum):
     FRESH = 0
@@ -210,12 +212,15 @@ class AbstractRow(ABC):
             self.__setattr__(col_name, val)
             self.__prop_tracker[col_name] = DataStatus.FRESH
 
+        self.post_refresh()
+
     def get_sheet_range(self) -> SheetRange:
         return self.worksheet.get_range_by_key_index_pairs([
             (getattr(self, identifier), identifier) for identifier in self.get_identifiers()
         ])
 
     def save(self):
+        self.pre_save()
         sr = self.get_sheet_range()
         self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, sr, [
             [getattr(self, v) for v in self.worksheet.headers]
@@ -224,6 +229,12 @@ class AbstractRow(ABC):
     @staticmethod
     @abstractmethod
     def get_identifiers() -> List[str]:
+        pass
+
+    def post_refresh(self):
+        pass
+
+    def pre_save(self):
         pass
 
 
@@ -257,6 +268,14 @@ class ExampleRow(AbstractRow):
     def worksheet(self) -> AbstractWorksheet:
         global ex
         return ex
+
+    def post_refresh(self):
+        if type(self.teams_b64) is str:
+            self.teams_b64 = b64_to_list(self.teams_b64)
+
+    def pre_save(self):
+        if type(self.teams_b64) is list:
+            self.teams_b64 = list_to_b64(self.teams_b64)
 
 
 if __name__ == '__main__':
