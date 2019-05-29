@@ -115,11 +115,12 @@ class AbstractWorksheet(ABC):
         values = result.get('values')  # todo: throw err? idk, handle
         ret = []
 
-        if sheet_range.row_last is None:
-            index = 1
-        else:
-            index = 0
+        if sheet_range.row_last is None:  # if we are grabbing the entire sheet
+            index = 1  # skip the first row that contains header info
+        else:  # otherwise
+            index = 0  # just grab the whole thing
 
+        # convert a list of strings to a dict, mapping headers to values
         for row in values[index:]:
             new_dict = {}
             for header, val in zip(self.headers, row):
@@ -200,7 +201,7 @@ class AbstractRow(ABC):
         if item in self.__prop_tracker:
             return super().__getattribute__(item)
 
-        srange = self.get_row()
+        srange = self.get_sheet_range()
         data = self.worksheet.read_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, srange)[0]
         for col_name, val in data.items():
             self.__setattr__(col_name, val)
@@ -208,14 +209,14 @@ class AbstractRow(ABC):
 
         return super().__getattribute__(item)
 
-    def get_row(self) -> SheetRange:
+    def get_sheet_range(self) -> SheetRange:
         return self.worksheet.get_range_by_key_index_pairs([
             (getattr(self, identifier), identifier) for identifier in self.get_identifiers()
         ])
 
     def save(self):
-        row = self.get_row()
-        self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, row, [
+        sr = self.get_sheet_range()
+        self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, sr, [
             [getattr(self, v) for v in self.worksheet.headers]
         ])
 
