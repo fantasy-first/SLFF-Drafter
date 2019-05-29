@@ -171,12 +171,14 @@ class AbstractWorksheet(ABC):
         # for each row of data in the sheet
         for sheet_row in entire_sheet:
             ret.append(self.row_class(  # instantiate a new Row class
-                **{  # and use the identifiers for each row as arguments for the row class constructor
-                    id_: sheet_row[id_] for id_ in self.row_class.get_identifiers()
+                **{  # and use the headers for each row as arguments for the row class constructor
+                    id_: sheet_row[id_] for id_ in self.headers
                 }
                 # for example, this would call EventInfo(event_id='foo'),
                 # or DraftResults(player='Justin', draft_key='2019iri')
             ))
+            if ret[-1] not in self.rows:
+                self.rows.append(ret[-1])
 
         return ret
 
@@ -186,6 +188,7 @@ class AbstractRow(ABC):
         self.__prop_tracker = {}
         for k, v in kwargs.items():
             setattr(self, k, v)
+            self.__prop_tracker[k] = DataStatus.FRESH
 
     @property
     @abstractmethod
@@ -236,6 +239,10 @@ class AbstractRow(ABC):
 
     def pre_save(self):
         pass
+
+    def __eq__(self, other):
+        return isinstance(other, AbstractRow) and all(
+            [getattr(self, k) == getattr(other, k) for k in self.get_identifiers()])
 
 
 class ExampleSheet(AbstractWorksheet):
