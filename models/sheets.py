@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Type, List
 
-from util.convert import b64_to_list, list_to_b64
+from util.convert import b64_to_list, list_to_b64, get_readable_datetime, parse_readable_datetime
 from wrappers.sheets import AbstractWorksheet, AbstractRow, SheetRange
 
 
@@ -11,11 +12,12 @@ class EventInfoSheet(AbstractWorksheet):
 
     @property
     def headers(self):
-        return ['event_id', 'tba_key', 'teams_b64']
+        return ['event_id', 'tba_key', 'teams_b64', 'event_name', 'reg_close_time', 'draft_begin_time',
+                'join_message_id']
 
     @property
     def sheet_range(self):
-        return SheetRange('EventInfo', 'A', None, 'C', None)
+        return SheetRange('EventInfo', 'A', None, 'G', None)
 
     @property
     def name(self):
@@ -37,10 +39,18 @@ class EventInfoRow(AbstractRow):
     def post_refresh(self):
         if type(self.teams_b64) is str:
             self.teams_b64 = b64_to_list(self.teams_b64)
+        if type(self.reg_close_time) is str:
+            self.reg_close_time = parse_readable_datetime(self.reg_close_time)
+        if type(self.draft_begin_time) is str:
+            self.draft_begin_time = parse_readable_datetime(self.draft_begin_time)
 
     def pre_save(self):
         if type(self.teams_b64) is list:
             self.teams_b64 = list_to_b64(self.teams_b64)
+        if type(self.reg_close_time) is datetime:
+            self.reg_close_time = get_readable_datetime(self.reg_close_time)
+        if type(self.draft_begin_time) is datetime:
+            self.draft_begin_time = get_readable_datetime(self.draft_begin_time)
 
 
 class DraftResultsSheet(AbstractWorksheet):

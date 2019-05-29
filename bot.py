@@ -5,6 +5,9 @@ import discord
 from discord.ext import commands
 from tabulate import tabulate
 from dynaconf import settings
+
+from models.sheets import EventInfoRow, event_info
+from util.convert import get_readable_datetime
 from models.draft import Draft
 
 Client = discord.Client()
@@ -18,10 +21,6 @@ nextIdNum = 1
 drafts = {}  # type: Dict[str, Draft]
 # maps eventKey -> draftKey
 eventKeys = {}  # type: Dict[str, str]
-
-
-def get_readable_datetime(dt: datetime.datetime) -> str:
-    return dt.strftime("%I:%M %p (%Z) on %a %b %d, %Y")
 
 
 @bot.event
@@ -52,6 +51,7 @@ async def ping(ctx):
     Example: .init "MidKnight Mayhem" 2019-05-02 12:00 15:00
 """
 
+
 # TODO fix this broken function
 @bot.command(pass_context=True)
 async def test(ctx):
@@ -64,7 +64,7 @@ async def test(ctx):
 
 
 @bot.command(pass_context=True)
-async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
+async def init(ctx, event_id, tba_key, event_name, draft_date, reg_close_time, draft_begin_time):
     try:
         reg_close = f'{draft_date} {reg_close_time} -0400'
         reg_close_time_dt = datetime.datetime.strptime(reg_close, '%Y-%m-%d %H:%M %z')
@@ -93,28 +93,29 @@ async def init(ctx, event_name, draft_date, reg_close_time, draft_begin_time):
         return
 
     # TODO prevent drafts from happening in the past
-    draft = Draft(
-        name=event_name,
-        reg_close_time=reg_close_time_dt,
-        draft_begin_time=draft_begin_time_dt,
+    new_row = EventInfoRow(
+        event_id=event_id, tba_key=tba_key, event_name=event_name, reg_close_time=reg_close_time_dt,
+        draft_begin_time=draft_begin_time_dt, teams_b64=[], join_message_id=''
     )
-
-    draft_key = draft.get_draft_key()
+    new_row.save()
+    event_info.add_row(new_row)
 
     readable_reg_close_time = get_readable_datetime(reg_close_time_dt)
     readable_draft_begin_time = get_readable_datetime(draft_begin_time_dt)
 
-    title_msg = f'Created draft for "{event_name}" [id: {draft_key}]'
+    title_msg = f'Created draft for "{event_name}" [id: {event_id}]'
     embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=title_msg)
-    embed.add_field(name='To register for this draft:', value=f'React to this message with {settings.DISCORD.REGISTER_EMOJI}')
+    embed.add_field(name='To register for this draft:',
+                    value=f'React to this message with {settings.DISCORD.REGISTER_EMOJI}')
     embed.add_field(name='Registration closes at:', value=readable_reg_close_time, inline=False)
     embed.add_field(name='Draft starts at:', value=readable_draft_begin_time, inline=False)
     embed.set_thumbnail(url=settings.DISCORD.THUMBNAIL)
 
     sent = await ctx.send(embed=embed)
 
-    draft.set_join_message_id(sent.id)
-    drafts[draft_key] = draft
+    new_row.join_message_id = str(sent.id)
+    new_row.save()
+    drafts[event_id] = new_row
 
     await sent.add_reaction(settings.DISCORD.REGISTER_EMOJI)
 
@@ -172,7 +173,8 @@ async def remove_teams(ctx, draft_key, *args):
         return
     newTeams = ", ".join(str(t) for t in args)
     teamList = ", ".join(drafts[draft_key].get_team_list())
-    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR, title=f"Successfully removed from team list for [{draft_key}]")
+    embed = discord.Embed(color=settings.DISCORD.TITLE_COLOR,
+                          title=f"Successfully removed from team list for [{draft_key}]")
     embed.add_field(
         name='Removed {}'.format(newTeams),
         value="New team list: {}".format(teamList),
