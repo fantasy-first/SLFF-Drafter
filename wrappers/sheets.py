@@ -1,0 +1,247 @@
+import inspect
+import os
+import pickle
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import List, Tuple, Optional, Dict
+
+from dynaconf import settings
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+
+
+class DataStatus(Enum):
+    FRESH = 0
+    MODIFIED = 1
+
+
+class SheetRange:
+    """
+    Wrapper class that represents a sheet range, e.g. "EventInfo!A1:F50"
+    """
+
+    def __init__(self, sheet_name: str, col_first: str, row_first: Optional[int], col_last: str,
+                 row_last: Optional[int]):
+        self.sheet_name = sheet_name
+        self.col_first = col_first
+        self.col_last = col_last
+        self.row_first = row_first
+        self.row_last = row_last
+
+    def __str__(self) -> str:
+        cell1 = self.col_first + ('' if self.row_first is None else str(self.row_first))
+        cell2 = self.col_last + ('' if self.row_last is None else str(self.row_last))
+        return f'{self.sheet_name}!{cell1}:{cell2}'
+
+
+class AbstractWorksheet(ABC):
+
+    @property
+    @abstractmethod
+    def headers(self):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def sheet_range(self):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def name(self):
+        raise NotImplementedError()
+
+    def __init__(self):
+        self.rows = []
+        creds = None
+        # The file token.pickle stores the user's access and refresh tokens, and is
+        # created automatically when the authorization flow completes for the first
+        # time.
+        if os.path.exists(settings.GOOGLE.CREDS_CACHE_FILENAME):
+            with open(settings.GOOGLE.CREDS_CACHE_FILENAME, 'rb') as token:
+                creds = pickle.load(token)
+
+        # If there are no (valid) credentials available, let the user log in.
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(settings.GOOGLE.CREDENTIALS_JSON,
+                                                                 settings.GOOGLE.SCOPES)
+                creds = flow.run_local_server()
+
+            # Save the credentials for next run
+            with open(settings.GOOGLE.CREDS_CACHE_FILENAME, 'wb') as token:
+                pickle.dump(creds, token)
+
+        # Build and store objects for future use
+        service = build('sheets', 'v4', credentials=creds)
+        self.sheet = service.spreadsheets()
+
+    def get_range_by_key_index_pairs(self, key_index_pairs: List[Tuple[str, str]]) -> SheetRange:
+        data = self.read_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, self.sheet_range)
+
+        for i, row in enumerate(data, start=2):
+            if all(row[field] == val for val, field in key_index_pairs):
+                sr = SheetRange(self.name, self.sheet_range.col_first, i, self.sheet_range.col_last, i)
+                return sr
+
+        # todo: how do we handle this?
+        raise Exception(f'Unable to find row in {self.sheet_range} (key-indices {key_index_pairs})')
+
+    def get_range_by_key(self, key: str, index: str) -> SheetRange:
+        """
+        Retrieves the range representing a single row that contains a key in the given row index.
+        :param key: value to search for
+        :param index: index in the row to search for the value
+        :return: a SheetRange representing a single row
+        """
+        return self.get_range_by_key_index_pairs([(key, index)])
+
+    def read_sheet_range(self, spreadsheet_id: str, sheet_range: SheetRange) -> List[Dict[str, str]]:
+        """
+        Reads the sheet at the given range.
+        :param spreadsheet_id: spreadsheet ID
+        :param sheet_range: the range to read from
+        :return: a list of lists containing data from the sheet
+        """
+        result = self.sheet.values().get(spreadsheetId=spreadsheet_id, range=str(sheet_range)).execute()
+        values = result.get('values')  # todo: throw err? idk, handle
+        ret = []
+
+        if sheet_range.row_last is None:
+            index = 1
+        else:
+            index = 0
+
+        for row in values[index:]:
+            new_dict = {}
+            for header, val in zip(self.headers, row):
+                new_dict[header] = val
+
+            ret.append(new_dict)
+
+        return ret
+
+    def append_sheet_range(self, spreadsheet_id: str, sheet_range: SheetRange, data: List[List[str]]):
+        """
+        Appends data to the sheet in the given range.
+        todo: find out what happens if we try to append to a range that doesn't have any more cells available?
+        :param spreadsheet_id: spreadsheet ID
+        :param sheet_range: the range to append to
+        :param data: the data to append to the sheet
+        """
+        body = {'values': data}
+        self.sheet.values().append(
+            spreadsheetId=spreadsheet_id, range=str(sheet_range),
+            valueInputOption='RAW', body=body
+        ).execute()
+        # todo: log?
+
+    def update_sheet_range(self, spreadsheet_id: str, sheet_range: SheetRange, data: List[List[Optional[str]]]):
+        """
+        Updates data in the given range of the sheet
+        :param spreadsheet_id: spreadsheet ID
+        :param sheet_range: the range to append to
+        :param data: the data to update within the given range
+        """
+        body = {'values': data}
+        self.sheet.values().update(
+            spreadsheetId=spreadsheet_id, range=str(sheet_range),
+            valueInputOption='RAW', body=body
+        ).execute()
+        # todo: log?
+
+    def add_row(self, row: 'AbstractRow'):
+        self.rows.append(row)
+
+    # @abstractmethod
+    # def get_row(self):
+    #     pass
+    #
+    # @classmethod
+    # def get_instance(cls, id_):
+    #     inst = cls()
+
+
+class AbstractRow(ABC):
+    def __init__(self):
+        self.__prop_tracker = {}
+
+    @property
+    @abstractmethod
+    def worksheet(self) -> AbstractWorksheet:
+        pass
+
+    def __setattr__(self, key, value):
+        calling_method = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
+        if calling_method != '__init__':
+            self.__prop_tracker[key] = DataStatus.MODIFIED
+
+        super().__setattr__(key, value)
+
+    def __getattr__(self, item):
+        if item in self.__prop_tracker:
+            return super().__getattribute__(item)
+
+        srange = self.get_row()
+        data = self.worksheet.read_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, srange)[0]
+        for col_name, val in data.items():
+            self.__setattr__(col_name, val)
+            self.__prop_tracker[col_name] = DataStatus.FRESH
+
+        return super().__getattribute__(item)
+
+    @abstractmethod
+    def get_row(self) -> SheetRange:
+        pass
+
+
+class ExampleSheet(AbstractWorksheet):
+
+    @property
+    def headers(self):
+        return ['event_id', 'tba_key', 'teams_b64']
+
+    @property
+    def sheet_range(self):
+        return SheetRange('EventInfo', 'A', None, 'C', None)
+
+    @property
+    def name(self):
+        return 'EventInfo'
+
+
+ex = ExampleSheet()
+
+
+class ExampleRow(AbstractRow):
+    @property
+    def worksheet(self) -> AbstractWorksheet:
+        global ex
+        return ex
+
+    def get_row(self) -> SheetRange:
+        return self.worksheet.get_range_by_key_index_pairs([
+            (self.event_id, 'event_id')
+        ])
+
+    def save(self):
+        row = self.get_row()
+        self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, row, [
+            [getattr(self, v) for v in self.worksheet.headers]
+        ])
+
+
+if __name__ == '__main__':
+    # given the following sheet in gsheets
+    # row1: event_id, tba_key, teams_B64
+    # row2: foo, 2019nyro, asjuieofnasiluefh
+
+    r = ExampleRow()
+    r.event_id = 'foo'
+    print(r.tba_key)  # prints 2019nyro
+    r.tba_key = '2018nyro'
+    r.save()  # commits 2018nyro to the sheet
+    print(r.tba_key)  # prints 2018nyro
