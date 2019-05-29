@@ -198,10 +198,9 @@ class AbstractRow(ABC):
         super().__setattr__(key, value)
 
     def __getattr__(self, item):
-        if item in self.__prop_tracker:
-            return super().__getattribute__(item)
+        if item not in self.__prop_tracker:
+            self.refresh()
 
-        self.refresh()
         return super().__getattribute__(item)
 
     def refresh(self):
