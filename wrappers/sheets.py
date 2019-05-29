@@ -3,7 +3,7 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Type
 
 from dynaconf import settings
 from google.auth.transport.requests import Request
@@ -50,6 +50,11 @@ class AbstractWorksheet(ABC):
     @property
     @abstractmethod
     def name(self):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def row_class(self):
         raise NotImplementedError()
 
     def __init__(self):
@@ -156,18 +161,28 @@ class AbstractWorksheet(ABC):
     def add_row(self, row: 'AbstractRow'):
         self.rows.append(row)
 
-    # @abstractmethod
-    # def get_row(self):
-    #     pass
-    #
-    # @classmethod
-    # def get_instance(cls, id_):
-    #     inst = cls()
+    def get_all_rows(self):
+        # Get all data in the sheet
+        entire_sheet = self.read_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, self.sheet_range)
+        ret = []
+        # for each row of data in the sheet
+        for sheet_row in entire_sheet:
+            ret.append(self.row_class(  # instantiate a new Row class
+                **{  # and use the identifiers for each row as arguments for the row class constructor
+                    id_: sheet_row[id_] for id_ in self.row_class.get_identifiers()
+                }
+                # for example, this would call EventInfo(event_id='foo'),
+                # or DraftResults(player='Justin', draft_key='2019iri')
+            ))
+
+        return ret
 
 
 class AbstractRow(ABC):
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.__prop_tracker = {}
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     @abstractmethod
@@ -193,12 +208,27 @@ class AbstractRow(ABC):
 
         return super().__getattribute__(item)
 
-    @abstractmethod
     def get_row(self) -> SheetRange:
+        return self.worksheet.get_range_by_key_index_pairs([
+            (getattr(self, identifier), identifier) for identifier in self.get_identifiers()
+        ])
+
+    def save(self):
+        row = self.get_row()
+        self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, row, [
+            [getattr(self, v) for v in self.worksheet.headers]
+        ])
+
+    @staticmethod
+    @abstractmethod
+    def get_identifiers() -> List[str]:
         pass
 
 
 class ExampleSheet(AbstractWorksheet):
+    @property
+    def row_class(self) -> Type[AbstractRow]:
+        return ExampleRow
 
     @property
     def headers(self):
@@ -217,21 +247,14 @@ ex = ExampleSheet()
 
 
 class ExampleRow(AbstractRow):
+    @staticmethod
+    def get_identifiers() -> List[str]:
+        return ['event_id']
+
     @property
     def worksheet(self) -> AbstractWorksheet:
         global ex
         return ex
-
-    def get_row(self) -> SheetRange:
-        return self.worksheet.get_range_by_key_index_pairs([
-            (self.event_id, 'event_id')
-        ])
-
-    def save(self):
-        row = self.get_row()
-        self.worksheet.update_sheet_range(settings.DRAFT.DATA_STORE_SPREADSHEET_ID, row, [
-            [getattr(self, v) for v in self.worksheet.headers]
-        ])
 
 
 if __name__ == '__main__':
@@ -239,9 +262,15 @@ if __name__ == '__main__':
     # row1: event_id, tba_key, teams_B64
     # row2: foo, 2019nyro, asjuieofnasiluefh
 
-    r = ExampleRow()
-    r.event_id = 'foo'
-    print(r.tba_key)  # prints 2019nyro
-    r.tba_key = '2018nyro'
-    r.save()  # commits 2018nyro to the sheet
-    print(r.tba_key)  # prints 2018nyro
+    # r = ExampleRow()
+    # r.event_id = 'foo'
+    # print(r.tba_key)  # prints 2019nyro
+    # r.tba_key = '2018nyro'
+    # r.save()  # commits 2018nyro to the sheet
+    # print(r.tba_key)  # prints 2018nyro
+
+    rows = ex.get_all_rows()
+    print(rows[0].event_id, rows[0].tba_key, rows[0].teams_b64)
+    print(rows[1].event_id, rows[1].tba_key, rows[1].teams_b64)
+
+    print(ExampleRow(event_id='foo').tba_key)
