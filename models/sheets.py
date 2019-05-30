@@ -91,3 +91,34 @@ class DraftResultsRow(AbstractRow):
     def pre_save(self):
         if type(self.pick_ids_b64) is list:
             self.pick_ids_b64 = list_to_b64(self.pick_ids_b64)
+
+
+class PickTable(AbstractWorksheet):
+    @property
+    def headers(self):
+        return ['pick_id', 'time', 'randomed', 'team']
+
+    @property
+    def sheet_range(self):
+        return SheetRange('PickTable', 'A', None, 'D', None)
+
+    @property
+    def name(self):
+        return 'PickTable'
+
+    @property
+    def row_class(self):
+        return PickRow
+
+
+pick_table = PickTable()
+
+
+class PickRow(AbstractRow):
+    @property
+    def worksheet(self) -> AbstractWorksheet:
+        return pick_table
+
+    @staticmethod
+    def get_identifiers() -> List[str]:
+        return ['pick_id']
